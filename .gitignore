@@ -1,0 +1,10 @@
+Code/*.pdf
+Code/*.out
+Code/*.pkl
+Code/*.sh
+Code/tuner/
+Code/Robustness/
+Code/Data
+Code/.idea
+Code/_*_
+Code/mon_env
