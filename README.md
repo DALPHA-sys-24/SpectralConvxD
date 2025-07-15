@@ -1,8 +1,20 @@
+---
+marp: true
+theme: default
+paginate: true
+title: Introduction to Markdown
+author: Jarod ketcha
+---
+
+
+
 # SpectralConvxD
 
 Convolution Neural Networks are a paradigm for image recognition.
+---
 
 
+---
 # Guide des commandes Git
 
 ## Configuration initiale
@@ -20,7 +32,7 @@ git init
 git add .
 git commit -m "Premier commit"
 ```
-
+---
 **Cloner un dépôt existant :**
 ```
 git clone https://github.com/utilisateur/depot.git
@@ -42,7 +54,7 @@ git add fichier.txt          # Ajouter un fichier spécifique
 git add .                    # Ajouter tous les fichiers modifiés
 git add *.js                 # Ajouter tous les fichiers .js
 ```
-
+---
 **Valider les changements :**
 ```
 git commit -m "Message descriptif"
@@ -63,7 +75,7 @@ git push origin main         # Première fois
 git push                     # Ensuite
 git push -u origin main      # Lier la branche locale à la distante
 ```
-
+---
 **Récupérer les changements :**
 ```
 git pull                     # Récupérer et fusionner
@@ -80,7 +92,7 @@ git checkout nouvelle-branche # Changer de branche
 git checkout -b nouvelle-branche # Créer et changer en une commande
 git switch nouvelle-branche  # Méthode moderne pour changer
 ```
-
+---
 **Fusionner les branches :**
 ```
 git checkout main
@@ -96,7 +108,7 @@ git checkout -- fichier.txt # Annuler les modifications d'un fichier
 git reset HEAD fichier.txt   # Retirer un fichier de l'index
 git reset --hard            # Annuler toutes les modifications
 ```
-
+---
 **Annuler des commits :**
 ```
 git reset --soft HEAD~1     # Annuler le dernier commit (garder les changements)
@@ -112,7 +124,7 @@ git diff                    # Changements non indexés
 git diff --staged           # Changements indexés
 git diff HEAD~1             # Comparer avec le commit précédent
 ```
-
+---
 **Ignorer des fichiers :**
 ```
 echo "node_modules/" > .gitignore
@@ -126,7 +138,7 @@ git commit -m "Ajout du .gitignore"
 git clean -f                # Supprimer les fichiers non trackés
 git clean -fd               # Supprimer fichiers et dossiers non trackés
 ```
-
+---
 ## Workflow complet typique
 
 ### 1. Démarrer un nouveau projet :
@@ -140,7 +152,7 @@ git commit -m "Initial commit"
 git remote add origin https://github.com/utilisateur/mon-projet.git
 git push -u origin main
 ```
-
+---
 ### 2. Travailler au quotidien :
 ```
 git pull                    # Récupérer les dernières modifications
@@ -162,7 +174,7 @@ git merge feature/nouvelle-fonctionnalite
 git push origin main
 git branch -d feature/nouvelle-fonctionnalite
 ```
-
+---
 ## Résumé des commandes essentielles
 
 Pour débuter avec Git, maîtrisez d'abord ces commandes de base :
