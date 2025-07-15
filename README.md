@@ -1,13 +1,14 @@
 ---
 marp: False
 theme: default
-class : lead
 paginate: true
+title: Introduction to Markdown
+author: Jarod ketcha
 ---
 
 
 
 # SpectralConvxD
-Convolution Neural Networks are a paradigm for image recognition.
-$C^tC\vec{x}$ equal to $\vec{x}$ when $C$ is the orthogonal convolution matrix.
+
+Convolution Neural Networks are a paradigm for image recognition. $C^TC\vec{x}$ equal to $\vec{x}$ when $C$ is the orthogonal convolution matrix
 
