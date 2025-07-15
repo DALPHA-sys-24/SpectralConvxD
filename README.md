@@ -17,12 +17,6 @@ Convolution Neural Networks are a paradigm for image recognition.
 **Date :** Juillet 2025
 
 ---
-
-
-
-
-
----
 # Guide des commandes Git
 
 ## Configuration initiale
