@@ -1,17 +1,25 @@
 ---
 marp: true
 theme: default
+class : lead
 paginate: true
-title: Introduction to Markdown
-author: Jarod ketcha
 ---
 
 
 
 # SpectralConvxD
-
 Convolution Neural Networks are a paradigm for image recognition.
+
 ---
+
+# 📘 Introduction to Markdown
+**Author :** Jarod  ketcha
+**Date :** Juillet 2025
+
+---
+
+
+
 
 
 ---
