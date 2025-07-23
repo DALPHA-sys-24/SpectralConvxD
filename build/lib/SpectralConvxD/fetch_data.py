@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import pandas as pd
-# from mnist1d.data import make_dataset, get_dataset_args,get_dataset
+from mnist1d.data import make_dataset, get_dataset_args,get_dataset
 # import os
 # os.environ['PYTHONIOENCODING'] = 'utf-8'
 

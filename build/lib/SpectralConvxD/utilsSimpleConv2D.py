@@ -7,7 +7,7 @@ from typing import Tuple,List,Any,Dict
 from matplotlib import pyplot as plt
 from tensorflow.keras.layers import Layer,Dense,Dropout,Conv1D
 from tensorflow.keras import activations, initializers, regularizers, constraints
-from .fetch_data import *
+from fetch_data import *
 
 
 def get_accuracy(name_file="SpecConv2dClassique",i=1,PATH="C:/Users/jketchak/OneDrive - Université de Namur/Bureau/DALPHAcommunity/UNAMUR/MATHESES/PUBLICATIONS/DONNEES/Convolution Neural Networks in the spectral"):
