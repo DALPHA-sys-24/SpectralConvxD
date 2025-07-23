@@ -11,3 +11,5 @@ SpectralConvxD/mon_env
 SpectralConvxD/*.txt
 *.egg-info
 build/
+.venv
+.idea

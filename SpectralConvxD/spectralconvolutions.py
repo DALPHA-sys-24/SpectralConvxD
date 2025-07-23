@@ -3,7 +3,7 @@ from typing import Tuple, List
 from tensorflow.keras.layers import Layer, Dense
 from tensorflow.python.keras import activations, initializers
 
-from utilsSimpleConv2D import *
+from .utilsSimpleConv2D import *
 
 
 class SpecConv2D(Layer):

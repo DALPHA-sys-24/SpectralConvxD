@@ -1,10 +1,10 @@
-from utilsSimpleConv2D import *
-from SpectralLayer import *
-from SpecCnn1dLayer import *
-from SpectralPruning import * 
+from .utilsSimpleConv2D import *
+from .SpectralLayer import *
+from .SpecCnn1dLayer import *
+from .SpectralPruning import * 
+from .specCnn2D import *
 import random
-from specCnn2D import *
-from spectralconvolutions import * 
+# from spectralconvolutions import * 
 
 
 class SpectralCnn(object):
