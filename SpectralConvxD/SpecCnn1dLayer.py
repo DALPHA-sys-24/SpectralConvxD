@@ -1,5 +1,5 @@
 
-from utilsSimpleConv2D import *
+from .utilsSimpleConv2D import *
 
 class SpecCnn1d(Layer):
     def __init__(self, filters,
