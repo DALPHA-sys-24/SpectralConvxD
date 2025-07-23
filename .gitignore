@@ -9,4 +9,5 @@ SpectralConvxD/.idea
 SpectralConvxD/_*_
 SpectralConvxD/mon_env
 SpectralConvxD/*.txt
-SpectralConvxD/*-info
+*.egg-info
+build/
