@@ -92,3 +92,6 @@ def test_matrix_convolution():
                             PADDING=PADDING,
                             INPUTS=INPUTS,
                             TOL=TOL)==True
+    
+if __name__=='__main__':
+    print("Hi,world !")
