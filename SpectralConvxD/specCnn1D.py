@@ -1,5 +1,9 @@
 
+from tensorflow.keras.layers import Layer
+from tensorflow.keras import activations, initializers
+
 from .utils import *
+
 
 class SpecCnn1D(Layer):
     def __init__(self, filters,

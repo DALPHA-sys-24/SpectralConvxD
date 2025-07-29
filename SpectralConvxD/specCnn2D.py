@@ -319,4 +319,4 @@ class SpecCnn2D(Layer):
 
 
 if __name__ == '__main__':
-    print("SpecCnn1d Layer is ready to use.")   
+    print("SpecCnn2d Layer is ready to use.")   
