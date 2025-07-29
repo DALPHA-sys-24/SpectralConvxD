@@ -319,5 +319,4 @@ class SpecCnn2D(Layer):
 
 
 if __name__ == '__main__':
-    layer = SpecCnn2D(kernel_size=3,strides=1,filters=5)
-    print(layer(tf.keras.layers.Input(shape=(28,28,3))))
+    print("SpecCnn1d Layer is ready to use.")   

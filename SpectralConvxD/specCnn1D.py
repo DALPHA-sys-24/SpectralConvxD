@@ -153,7 +153,6 @@ class SpecCnn1D(Layer):
 
         return outputs
 
-    @tf.function
     def indices_phi(self,*args):
         self.indices: List[Tuple] = list()
         for f in range(self.filters):
