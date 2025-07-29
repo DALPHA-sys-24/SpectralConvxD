@@ -4,8 +4,8 @@ SpectralConvxD/*.png
 SpectralConvxD/*.out
 SpectralConvxD/*.pkl
 SpectralConvxD/*.sh
-SpectralConvxD/*.vscode
-SpectralConvxD/*.pytest_cache
+SpectralConvxD/*.vscode/
+SpectralConvxD/*.pytest_cache/
 SpectralConvxD/*.ipynb_*
 SpectralConvxD/.idea
 SpectralConvxD/tuner/
