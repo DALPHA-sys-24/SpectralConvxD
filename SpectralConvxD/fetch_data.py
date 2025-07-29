@@ -13,7 +13,6 @@ def generate_data(color_mode='grayscale',seed=23,subset="both",validation_split=
         return x_train, y_train,x_test, y_test
     
     if name_data=="mnist1d":
-        
         input_dim = 40
         defaults = get_dataset_args()
         defaults.num_samples = 10000

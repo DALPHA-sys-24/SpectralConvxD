@@ -1,4 +1,6 @@
 SpectralConvxD/*.pdf
+SpectralConvxD/*.csv
+SpectralConvxD/*.png
 SpectralConvxD/*.out
 SpectralConvxD/*.pkl
 SpectralConvxD/*.sh
@@ -11,6 +13,7 @@ SpectralConvxD/mon_env
 SpectralConvxD/*.txt
 *.egg-info
 build/
+tuner/
 .venv
 .idea
 *.txt

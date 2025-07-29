@@ -1,11 +1,10 @@
 import tensorflow as tf
 from tensorflow import keras
 from keras_tuner import Hyperband
+from SpectralLayer import Spectral
+import SpectralConvxD as spc
+print("SpectralConvxD version :{}".format(spc.__version__))
 
-from .fetch_data import*
-from .specCnn2D import *
-from .specCnn1D import *
-from .SpectralLayer import*
 
 def build_best_model(hp):
 
@@ -22,9 +21,9 @@ def build_best_model(hp):
 
     model= tf.keras.Sequential()
     model.add(tf.keras.layers.Input(shape=(d,)))
-    model.add(SpecCnn1D(filters=20,kernel_size=3,stride=hp.Choice('stride', values=[1,2,3]),padding=0,trainable_phi=False,use_lambda_out=False,use_lambda_in=True,activation=activation,use_bias=use_bias))
+    model.add(spc.SpecCnn1D(filters=20,kernel_size=3,stride=hp.Choice('stride_cnn', values=[1,2,3]),padding=0,trainable_phi=False,use_lambda_out=False,use_lambda_in=True,activation=activation,use_bias=use_bias))
     
-    model.add(tf.keras.layers.MaxPooling1D(pool_size=hp.Choice('pool_size', values=[2,3]), strides=1, padding="valid"))
+    model.add(tf.keras.layers.MaxPooling1D(pool_size=hp.Choice('pool_size', values=[2,3,4,5]), strides=1, padding="valid"))
     
     model.add(tf.keras.layers.Flatten())
     
@@ -34,8 +33,8 @@ def build_best_model(hp):
 
     return model
 
-def spec_tuner():
-    x_train, y_train,x_test, y_test=generate_data(name_data='mnist1d')
+def spec_tuner(epochs,batch_size):
+    x_train, y_train,x_test, y_test=spc.generate_data(name_data='mnist1d')
 
     gpus = tf.config.list_physical_devices('GPU')
     if gpus:
@@ -56,4 +55,23 @@ def spec_tuner():
             best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
             print(best_hps.values)
     else:
-        raise Exception("No GPU available")
+        print("No GPU found. Running on CPU.")
+        with tf.device("/device:CPU:0"):
+            # Définir le tuner
+            tuner = Hyperband(
+                build_best_model,
+                objective='val_accuracy',
+                max_epochs=epochs,
+                factor=3,
+                directory='tuner/tuning',
+                project_name='model'
+            )
+            # Regarder un récapitulatif de la recherche d'hyperparamètres
+            tuner.search_space_summary()
+
+            tuner.search(x_train, y_train, epochs=epochs, batch_size=batch_size,validation_data=(x_test, y_test))
+            best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
+            print(best_hps.values)
+
+if __name__ == "__main__":
+    spec_tuner(epochs=10, batch_size=128)
