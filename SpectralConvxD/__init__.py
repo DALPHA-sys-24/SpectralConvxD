@@ -1,4 +1,4 @@
-from .specCnn1D import specCnn1D
+from .specCnn1D import SpecCnn1D
 from .specCnn2D import SpecCnn2D
 from .models import SpectralCnn
 from .fetch_data import generate_data
