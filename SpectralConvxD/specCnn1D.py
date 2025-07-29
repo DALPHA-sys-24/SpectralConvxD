@@ -1,7 +1,7 @@
 
-from .utilsSimpleConv2D import *
+from .utils import *
 
-class SpecCnn1d(Layer):
+class SpecCnn1D(Layer):
     def __init__(self, filters,
                     kernel_size=3,
                     stride=1,
@@ -16,7 +16,7 @@ class SpecCnn1d(Layer):
                     lambda_in_initializer="glorot_uniform",
                     lambda_out_initializer="glorot_uniform"):
 
-        super(SpecCnn1d,self).__init__()
+        super(SpecCnn1D,self).__init__()
 
         self.filters = filters
         self.kernel_size = kernel_size

@@ -1,7 +1,7 @@
-from tensorflow.keras.layers import Layer, Dense
+from tensorflow.keras.layers import Layer
 from tensorflow.keras import activations, initializers
 
-from .utilsSimpleConv2D import *
+from .utils import *
 
 class SpecCnn2D(Layer):
 

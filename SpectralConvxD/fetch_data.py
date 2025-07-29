@@ -2,8 +2,7 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 from mnist1d.data import make_dataset, get_dataset_args,get_dataset
-# import os
-# os.environ['PYTHONIOENCODING'] = 'utf-8'
+
 
 def generate_data(color_mode='grayscale',seed=23,subset="both",validation_split=0.2,name_data=None,file_path : str =None,n : int =None, p : int=None):
     if name_data=="mnist":

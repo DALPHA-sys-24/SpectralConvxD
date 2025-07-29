@@ -1,9 +1,8 @@
 from typing import Tuple, List
-
-from tensorflow.keras.layers import Layer, Dense
+from tensorflow.keras.layers import Layer
 from tensorflow.python.keras import activations, initializers
 
-from .utilsSimpleConv2D import *
+from .utils import *
 
 
 class SpecConv2D(Layer):

@@ -1,116 +1,57 @@
-from .utilsSimpleConv2D import *
+from .utils import *
 from .SpectralLayer import *
-from .SpecCnn1dLayer import *
-from .SpectralPruning import * 
+from .specCnn1D import *
 from .specCnn2D import *
-import random
-# from spectralconvolutions import * 
+
+
 
 
 class SpectralCnn(object):
-    def __init__(self,spectral_config,spectral_cnn1d_config,spectral_cnn2d_config, hyperparameters,maxpooling_config=None):
-        self.spectral_config=spectral_config
-        self.spectral_cnn1d_config=spectral_cnn1d_config
-        self.spectral_cnn2d_config=spectral_cnn2d_config
+    def __init__(self,hyperparameters,maxpooling_config=None):
         self.maxpooling_config=maxpooling_config
         self.hyperparameters=hyperparameters
-        
         self.percentage_zeroed=[]
         self.cut_value=[]
         
-    def compile_models(self,units:int= 1000, pruning:float=None,Use_pruning:bool=True, use_base_and_Lambda=False, name:str=None):
-        
-        if name=='Dspec' and use_base_and_Lambda==False:
-            raise ValueError("If name is 'Dspec', use_base_and_Lambda must be True for the moment ")
+    def compile_models(self,units:int= 1000,spectral_config=None,spectral_cnn1d_config=None,spectral_cnn2d_config=None, name:str=None):
+        """_summary_
+
+        Args:
+            units (int, optional): _description_. Defaults to 1000.
+            spectral_config (_type_, optional): _description_. Defaults to None.
+            spectral_cnn1d_config (_type_, optional): _description_. Defaults to None.
+            spectral_cnn2d_config (_type_, optional): _description_. Defaults to None.
+            name (str, optional): _description_. Defaults to [reference,Dspec,specConvXd] 
+
+        Raises:
+            ValueError: _description_
+            ValueError: _description_
+            ValueError: _description_
+            ValueError: _description_
+            ValueError: _description_
+            ValueError: _description_
+        """
         if name is None:
             raise ValueError("model's name must be defined")
         if not isinstance(units, int):
             raise ValueError("hyperparameters must be a dictionary")
-        if pruning is None or pruning < 0 or pruning >=1:
-            raise ValueError("pruning must be a float between 0 and 1 (exclusive)")
-        if Use_pruning==True and name!='pruningDspec':
-            raise ValueError("Impossible!")
+        
+        self.name=name
+        self.set_spectral_config(spectral_config)
+        self.set_spectral_cnn1d_config(spectral_cnn1d_config)
+        self.set_spectral_cnn2d_config(spectral_cnn2d_config)        
 
-        if name=='Dspec':
-            #config de base
-            # self.spectral_cnn1d_config['use_lambda_in'] = True
-            # self.spectral_cnn1d_config['trainable_phi'] = False
-            
-            #new config
-            self.spectral_cnn1d_config['use_lambda_in'] = False
-            self.spectral_cnn1d_config['trainable_phi'] = True
-            
-            print("Dspec model compilation")
-
-            if use_base_and_Lambda:
-                self.spectral_config['is_diag_end_trainable'] = True
+        if  name in  ['reference','Dspec','specConvXd']:
+            self.model= tf.keras.Sequential()
+            self.model.add(tf.keras.layers.Input(shape=self.hyperparameters.get('input_shape')))
+            if self.hyperparameters.get('conxd')==1:
+                self.model.add(SpecCnn1D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn1d_config,activation=self.hyperparameters.get('activation')))
+                self.model.add(tf.keras.layers.MaxPooling1D(pool_size=self.hyperparameters.get('pool_size'),**self.maxpooling_config))
+            elif self.hyperparameters.get('conxd')==2:
+                self.model.add(SpecCnn2D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn2d_config,activation=self.hyperparameters.get('activation')))
+                self.model.add(tf.keras.layers.MaxPooling2D(pool_size=self.hyperparameters.get('pool_size'),**self.maxpooling_config))
             else:
-                self.spectral_config['is_diag_end_trainable'] = False
-                
-            self.spectral_config['is_base_trainable'] = True
-            self.spectral_config['is_diag_end_trainable'] = True
-            
-            self.model= tf.keras.Sequential()
-            self.model.add(tf.keras.layers.Input(shape=self.hyperparameters.get('input_shape')))
-            # self.model.add(SpectralConv2D_T(filters=self.hyperparameters.get('filters'), **self.spectral_cnn2d_config,activation=self.hyperparameters.get('activation')))
-
-            # self.model = tf.keras.Sequential()
-            # self.model.add(tf.keras.layers.Input(shape=self.hyperparameters.get('input_shape')))
-            # self.model.add(SpecCnn2D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn2d_config,activation=self.hyperparameters.get('activation')))
-            self.model.add(SpecCnn1d(filters=self.hyperparameters.get('filters'), **self.spectral_cnn1d_config,activation=self.hyperparameters.get('activation')))
-
-            self.model.add(tf.keras.layers.MaxPooling1D(**self.maxpooling_config))
-
-            self.model.add(tf.keras.layers.Flatten())
-
-            self.model.add(Spectral(units, **self.spectral_config, activation=self.hyperparameters.get('activation')))
-            # self.model.add(Spectral(self.hyperparameters.get('labels'), **self.spectral_config, activation='softmax'))
-            self.model.add(Dense(self.hyperparameters.get('labels'), use_bias=self.spectral_config.get('use_bias'), activation='softmax'))
-
-            opt = tf.keras.optimizers.Adam(learning_rate=self.hyperparameters.get('learning_rate'))
-            self.model.compile(optimizer=opt, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-            self.name = name
-
-        
-        elif name=='pruningDspec':
-            self.spectral_cnn1d_config['use_lambda_in'] = True
-            self.spectral_cnn1d_config['trainable_phi'] = False
-
-            self.spectral_config['is_diag_end_trainable'] = True
-            self.spectral_config['is_base_trainable'] = True
-
-            self.model = tf.keras.Sequential()
-            self.model.add(tf.keras.layers.Input(shape=self.hyperparameters.get('input_shape')))
-            # self.model.add(SpecCnn2D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn2d_config,activation=self.hyperparameters.get('activation')))
-            # self.model.add(tf.keras.layers.Input(shape=(self.hyperparameters.get('input_shape'),)))
-            self.model.add(SpecCnn1d(filters=self.hyperparameters.get('filters'), **self.spectral_cnn1d_config,activation=self.hyperparameters.get('activation')))
-
-            self.model.add(tf.keras.layers.MaxPooling2D(**self.maxpooling_config))
-
-            self.model.add(tf.keras.layers.Flatten())
-                
-            self.model.add(SpectralPruning(units, **self.spectral_config, Use_pruning=Use_pruning, percent_pruning=pruning, activation=self.hyperparameters.get('activation')))
-            self.model.add(SpectralPruning(self.hyperparameters.get('labels'), **self.spectral_config, activation='softmax'))
-
-            opt = tf.keras.optimizers.Adam(learning_rate=self.hyperparameters.get('learning_rate'))
-            self.model.compile(optimizer=opt, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-            self.name = name
-        
-        elif name == 'specCnn1d':
-            self.spectral_cnn1d_config['use_lambda_in'] = True
-            self.spectral_cnn1d_config['trainable_phi'] = False
-
-            self.spectral_config['is_diag_end_trainable'] = True
-            self.spectral_config['is_base_trainable'] = False
-            
-            
-            self.model= tf.keras.Sequential()
-            self.model.add(tf.keras.layers.Input(shape=self.hyperparameters.get('input_shape')))
-            # self.model.add(SpecCnn2D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn2d_config,activation=self.hyperparameters.get('activation')))
-            # self.model.add(tf.keras.layers.Input(shape=(self.hyperparameters.get('input_shape'),)))
-            self.model.add(SpecCnn1d(filters=self.hyperparameters.get('filters'),**self.spectral_cnn1d_config,activation= self.hyperparameters.get('activation')))
-
-            self.model.add(tf.keras.layers.MaxPooling2D(**self.maxpooling_config))
+                raise ValueError("conxd's value must be 1 or 2")
 
             self.model.add(tf.keras.layers.Flatten())
 
@@ -120,45 +61,16 @@ class SpectralCnn(object):
             opt = tf.keras.optimizers.Adam(learning_rate=self.hyperparameters.get('learning_rate')) 
             self.model.compile(optimizer=opt, loss='sparse_categorical_crossentropy',metrics=['accuracy'])
             self.name = name
-        
-        elif name == 'reference':
-            self.spectral_cnn1d_config['use_lambda_in'] = False
-            self.spectral_cnn1d_config['trainable_phi'] = True
-            
-            
-            self.model= tf.keras.Sequential()
-            self.model.add(tf.keras.layers.Input(shape=self.hyperparameters.get('input_shape')))
-            # self.model.add(tf.keras.layers.Conv2D(2,(3,3),padding='valid',strides=1,use_bias=True,activation='relu'))
-            # self.model.add(SpectralConv2D_T(filters=self.hyperparameters.get('filters'), **self.spectral_cnn2d_config,activation=self.hyperparameters.get('activation')))
-            # self.model.add(tf.keras.layers.Conv2D(2,(3,3),padding='valid',strides=1,use_bias=True,activation='relu'))
-            # self.model.add(tf.keras.layers.Input(shape=self.hyperparameters.get('input_shape')))
-            # self.model.add(SpecCnn2D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn2d_config,activation=self.hyperparameters.get('activation')))
-            # self.model.add(tf.keras.layers.Input(shape=(self.hyperparameters.get('input_shape'),)))
-            self.model.add(SpecCnn1d(filters=self.hyperparameters.get('filters'),**self.spectral_cnn1d_config,activation= self.hyperparameters.get('activation')))
-
-            # self.model.add(tf.keras.layers.MaxPooling2D(**self.maxpooling_config))
-            self.model.add(tf.keras.layers.MaxPooling1D(**self.maxpooling_config))
-
-            self.model.add(tf.keras.layers.Flatten())
-
-            self.model.add(Dense(units,use_bias=self.spectral_config.get('use_bias'), activation=self.hyperparameters.get('activation')))
-            self.model.add(Dense(self.hyperparameters.get('labels'), use_bias=self.spectral_config.get('use_bias'), activation='softmax'))
-
-            opt = tf.keras.optimizers.Adam(learning_rate=self.hyperparameters.get('learning_rate'))
-            self.model.compile(optimizer=opt, loss='sparse_categorical_crossentropy',metrics=['accuracy'])
-            self.name = name
-    
-    
         else:
-            raise ValueError("model's name must be 'reference' , 'specCnn1d', 'Dspec' or 'pruningDspec'")
+            raise ValueError("model's name must be 'reference' ,'Dspec',or 'specConvXd'")
         
         self.hyperparameters['units']=units
     
     def train(self,x_train, y_train, x_test=None, y_test=None,name=None,verbose=0,layers=None):
         if name is None:
             raise ValueError("model's name must be defined")   
-        if name != 'reference' and name != 'specCnn1d' and name != 'Dspec' and name!='pruningDspec':
-            raise ValueError("model's name must be 'reference', 'specCnn1d', 'Dspec', or 'pruningDspec'")
+        if name != 'reference' and name != 'Dspec' and name != 'specConvXd':
+            raise ValueError("model's name must be 'reference', 'specCnn1d', or 'Dspec'")
         if not isinstance(verbose, int):
             raise ValueError("verbose must be an integer") 
 
@@ -182,8 +94,8 @@ class SpectralCnn(object):
         
         if name is None:
             raise ValueError("model's name must be defined")
-        if name != 'reference' and name != 'specCnn1d' and name != 'Dspec'and name!='pruningDspec':
-            raise ValueError("model's name must be 'reference', 'specCnn1d','Dspec', or 'pruningDspec'")
+        if name != 'reference' and name != 'specCnnXd' and name != 'Dspec':
+            raise ValueError("model's name must be 'reference', 'specConvXd' or 'Dspec'")
         if name!=self.name:
             raise ValueError("model's name must be the same as the one used in compile_models()")
         if x_test is None or y_test is None:
@@ -221,9 +133,7 @@ class SpectralCnn(object):
             for k,layer in enumerate(layers):
                 weigths=self.weigths[k]
                 # units=weigths[0].shape[1]
-                print(weigths[0].shape)
                 result, collapsed_indices, row_sums, threshold_value=self.absolute_value_of_the_incoming_connectivity_collapse(weigths[0], p)
-                print(collapsed_indices)
                 assert result.shape==weigths[0].shape
                 weigths[0]=result
                 # indices=random.sample(range(units),int(units*p))
@@ -236,7 +146,6 @@ class SpectralCnn(object):
                 cut_value = self.quantile_robust(weigths[1][0,:], p)
                 self.cut_value.append(cut_value)
                 pruning_weights, percentage_zeroed = self.threshold_filter(cut_value, weigths[1][0,:])
-                print(weigths[1])
                 self.percentage_zeroed.append(percentage_zeroed)
                 assert pruning_weights.shape==weigths[1][0,:].shape
                 weigths[1][0,:] = pruning_weights
@@ -360,13 +269,11 @@ class SpectralCnn(object):
 
         
         # Create a copy to avoid modifying the original
-        print(vector)
         result = vector.copy()
         
         # Count values below threshold
         values_below_threshold = np.sum(vector < threshold)
         total_values = len(vector)
-        print(total_values)
         
         # Calculate percentage
         percentage_zeroed = (values_below_threshold / total_values) * 100 if total_values > 0 else 0
@@ -392,17 +299,14 @@ class SpectralCnn(object):
         if name=='reference':
             print(f"Reference model summary:\n ")
             self.model.summary()
-        elif name=='specCnn1d': 
-            print("Spectral Cnn1D model summary:\n ")
+        elif name=='specConvXd': 
+            print("specConvXd model summary:\n ")
             self.model.summary()
         elif name=='Dspec':
             print("Dspec model summary:\n ")
             self.model.summary()
-        elif name=='pruningDspec':
-            print("pruningDspec model summary:\n ")
-            self.model.summary()
         else:
-            raise ValueError("model's name must be 'reference','specCnn1d' or 'Dspec'")
+            raise ValueError("model's name must be 'reference','specConvXd' or 'Dspec'")
         
 
     def mask_by_quantile(self, tensor, percentage:float):
@@ -441,16 +345,21 @@ class SpectralCnn(object):
     
     def get_spectral_cnn1d_config(self):
         return self.spectral_cnn1d_config
+    
+    def get_spectral_cnn2d_config(self):
+        return self.spectral_cnn2d_config
      
     def get_hyperparameters(self):
         return self.hyperparameters
-    
-          
+     
     def set_spectral_config(self,spectral_config):
         self.spectral_config=spectral_config
         
     def set_spectral_cnn1d_config(self,spectral_cnn1d_config):
         self.spectral_cnn1d_config=spectral_cnn1d_config
+        
+    def set_spectral_cnn2d_config(self,spectral_cnn2d_config):
+        self.spectral_cnn2d_config=spectral_cnn2d_config
         
     def set_maxpooling_config(self,maxpooling_config):
         self.maxpooling_config=maxpooling_config
@@ -473,8 +382,8 @@ class SpectralCnn(object):
             raise ValueError("units must be an integer")
         if name is None:
             raise ValueError("model's name must be defined")
-        if name not in ['reference', 'specCnn1d', 'Dspec','pruningDspec']:
-            raise ValueError("model's name must be 'reference', 'specCnn1d', 'Dspec' or 'pruningDspec'")
+        if name not in ['reference', 'specConvXd', 'Dspec']:
+            raise ValueError("model's name must be 'reference', 'specCnn1d' or 'Dspec'")
         if units <= 0:
             raise ValueError("units must be greater than 0")
         
@@ -508,22 +417,8 @@ class SpectralCnn(object):
             return value
         
         
-        elif name == 'pruningDspec':
-            try:
-                output_shape = math.floor((self.hyperparameters.get('input_shape') + 2*self.spectral_cnn1d_config.get("padding") - self.spectral_cnn1d_config.get('kernel_size'))/self.spectral_cnn1d_config.get('stride')) + 1
-                output_shape = math.floor((output_shape - self.maxpooling_config.get('pool_size'))/self.maxpooling_config.get('strides')) + 1
-            except KeyError or TypeError:
-                raise ValueError("kernel_size, padding, and stride must be defined in spectral_cnn1d_config")
-            
-            try:
-                weights=self.hyperparameters.get('input_shape') * self.hyperparameters.get('filters')+ units*(self.hyperparameters.get('labels') + output_shape*self.hyperparameters.get('filters'))
-            except KeyError or TypeError:
-                raise ValueError("kernel_size, filters, labels, and output_shape must be defined in hyperparameters")
-            bias=self.hyperparameters.get('filters') + units + self.hyperparameters.get('labels')
-            value = weights + bias + self.hyperparameters.get('labels')+units*(1-pruning)*100
-            return value
-        
-        elif name == 'specCnn1d':
+        elif name == 'specConvXd':
+            print("number_of_parameters: specConvXd , X=1 \n")
             try:
                 weights=self.hyperparameters.get('input_shape') * self.hyperparameters.get('filters') + units + self.hyperparameters.get('labels')
             except KeyError or TypeError:
@@ -536,4 +431,4 @@ class SpectralCnn(object):
 
 if __name__ == "__main__":
     print("This is a module, not a script. Please import it in your code.")
-    exit(1)
+

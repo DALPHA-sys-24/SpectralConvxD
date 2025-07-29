@@ -11,6 +11,16 @@ from .fetch_data import *
 
 
 def get_accuracy(name_file="SpecConv2dClassique",i=1,PATH="C:/Users/jketchak/OneDrive - Université de Namur/Bureau/DALPHAcommunity/UNAMUR/MATHESES/PUBLICATIONS/DONNEES/Convolution Neural Networks in the spectral"):
+    """_summary_
+
+    Args:
+        name_file (str, optional): _description_. Defaults to "SpecConv2dClassique".
+        i (int, optional): _description_. Defaults to 1.
+        PATH (str, optional): _description_. Defaults to "C:/Users/jketchak/OneDrive - Université de Namur/Bureau/DALPHAcommunity/UNAMUR/MATHESES/PUBLICATIONS/DONNEES/Convolution Neural Networks in the spectral".
+
+    Returns:
+        _type_: _description_
+    """
     with open(f"{PATH}/Data{i}/{name_file}/{name_file}.csv", "r") as f:
         data=pd.read_csv(f, sep=",", header=0)
     try:
@@ -21,7 +31,20 @@ def get_accuracy(name_file="SpecConv2dClassique",i=1,PATH="C:/Users/jketchak/One
 
 
 def extract_accuracy_and_save(replication, depth,drop=None,name=None):
-    
+    """_summary_
+
+    Args:
+        replication (_type_): _description_
+        depth (_type_): _description_
+        drop (_type_, optional): _description_. Defaults to None.
+        name (_type_, optional): _description_. Defaults to None.
+
+    Raises:
+        ValueError: _description_
+
+    Returns:
+        _type_: _description_
+    """
     
     if drop is None:
         accuracy:Dict[int,pd.DataFrame]=dict()
@@ -67,10 +90,6 @@ def extract_accuracy_and_save(replication, depth,drop=None,name=None):
         data["med"]=data[[order for order in  range(replication['rep']) ]].median(axis=1)
         data["sigma"]= data[[order for order in  range(replication['rep'])]].std(axis=1)
         data.to_csv(f"Robustness/Data/{name}/{name}.csv", header=True, index=True)
-            
-    
-    
-    
     return data
 
 
@@ -226,11 +245,20 @@ def plot_benchmarks(data, fontsize=12,alpha=0.2,loc='upper left', dpi=300, use_g
     else:
         plt.close(fig)
 
-def shift_(weight:tf.Tensor, strides: int,axis:int=1):
-    return  tf.roll(weight, shift=strides, axis=axis)
-
 
 def indices_phi(filters: int, N: int, M: int, F: int = 3, S: int = 1, *args):
+    """_summary_
+
+    Args:
+        filters (int): _description_
+        N (int): _description_
+        M (int): _description_
+        F (int, optional): _description_. Defaults to 3.
+        S (int, optional): _description_. Defaults to 1.
+
+    Returns:
+        _type_: _description_
+    """
     indices: List[Tuple] = list()
     out_shape1: int = math.floor((N - F) / S) + 1
     out_shape2: int = math.floor((M - F) / S) + 1
@@ -254,6 +282,17 @@ def indices_phi(filters: int, N: int, M: int, F: int = 3, S: int = 1, *args):
     return indices
 
 def Build_J(N:int,M:int,F:int=3,S:int=1,*args):
+    """_summary_
+
+    Args:
+        N (int): _description_
+        M (int): _description_
+        F (int, optional): _description_. Defaults to 3.
+        S (int, optional): _description_. Defaults to 1.
+
+    Returns:
+        _type_: _description_
+    """
     out_shape1:int=math.floor((N-F)/S)+1
     out_shape2:int=math.floor((M-F)/S)+1
         
@@ -284,6 +323,15 @@ def Build_J(N:int,M:int,F:int=3,S:int=1,*args):
     return J1, J2
 
 def build_matrix_strides(out_shape,strides):
+    """_summary_
+
+    Args:
+        out_shape (_type_): _description_
+        strides (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
 
     height = math.floor(out_shape[1] / strides)
     width = math.floor(out_shape[2] / strides)
@@ -304,6 +352,15 @@ def build_matrix_strides(out_shape,strides):
 
 
 def build_matrix_padding(input_shape: Tuple, pad: int):
+    """_summary_
+
+    Args:
+        input_shape (Tuple): _description_
+        pad (int): _description_
+
+    Returns:
+        _type_: _description_
+    """
     # block
     out_shape: Tuple = input_shape[0] + 2 * pad, input_shape[1] + 2 * pad
     width_matrix_padding: int = input_shape[0] * input_shape[1]
@@ -340,6 +397,17 @@ def build_matrix_padding(input_shape: Tuple, pad: int):
 
 
 def convolution_at(img: np.ndarray,kernel: np.ndarray,i:int,j:int)->float:
+    """_summary_
+
+    Args:
+        img (np.ndarray): _description_
+        kernel (np.ndarray): _description_
+        i (int): _description_
+        j (int): _description_
+
+    Returns:
+        float: _description_
+    """
     output = 0
     kernel_shape:Tuple =kernel.shape
     img_shape: Tuple = img.shape
@@ -353,6 +421,15 @@ def convolution_at(img: np.ndarray,kernel: np.ndarray,i:int,j:int)->float:
     return output
 
 def convolution(img: np.ndarray,kernel: np.ndarray)->np.ndarray:
+    """_summary_
+
+    Args:
+        img (np.ndarray): _description_
+        kernel (np.ndarray): _description_
+
+    Returns:
+        np.ndarray: _description_
+    """
     img_shape:Tuple =img.shape
     output =np.zeros(shape=img_shape,dtype="float32")
     for i in range(img_shape[0]):
@@ -360,99 +437,12 @@ def convolution(img: np.ndarray,kernel: np.ndarray)->np.ndarray:
             output[i,j]=convolution_at(img=img,kernel=kernel,i=i,j=j)
     return output
 
-class PaddingJacobiens(Layer):
-
-    def __init__(self,
-                 kernel_size=3,
-                 strides=1,
-                 padding='VALID'):
-
-        super(PaddingJacobiens, self).__init__()
-        self.strides = strides
-        self.padding = padding
-        self.kernel_size = kernel_size
-
-
-    def build(self, input_shape):
-        input_shape = tf.TensorShape(input_shape)
-        input_channel = input_shape[-1]
-        self.pad = math.floor((self.kernel_size - 1) / 2)
-    
-        # -----------------------------------------matrix_pad-----------------------------------------------
-        if self.padding == "SAME":
-            if self.strides > 1:
-                raise Exception("Not implemented: paddind=SAME and strides>1. if padding=SAME, strides=1")
-            # Right_shape
-            self.Right_shape: Tuple = input_shape[1] + 2 * self.pad, input_shape[2] + 2 * self.pad
-            inputShape = input_shape[1], input_shape[2]
-            # matrix_pad
-            self.matrix_pad = build_matrix_padding(input_shape=inputShape, pad=self.pad)
-            # Jacobien_strides
-            self.Build_J()
-
-        elif self.padding == "VALID":
-            # Right_shape
-            self.Right_shape: Tuple = input_shape[1], input_shape[2]
-            # matrix_pad
-            self.matrix_pad = matrix = tf.constant(np.identity(input_shape[1] * input_shape[2]), dtype="float32")
-    
-            if self.strides>self.kernel_size:
-                raise Exception("Not implemented")
-            else:
-                # Jacobien_strides
-                self.Build_J()
-        else:
-            raise Exception("Padding not found")
-        # ------------------------------------------------------------------------------------
-
-        # --------------------------------------------------------------------------------------
-        self.build = True
-        # --------------------------------------------------------------------------------------
-
-    def Build_J(self,*args):
-        out_shape1:int=math.floor((self.Right_shape[0]-self.kernel_size)/self.strides) + 1
-        out_shape2:int=math.floor((self.Right_shape[1]-self.kernel_size)/self.strides) + 1
-    
-        row = np.zeros(shape=(self.Right_shape[1],1))
-        row[0,0]=1
-        row=tf.constant(row,dtype=tf.float32)
-        for j in range(out_shape2):
-            for k in range(self.kernel_size):
-                try:
-                    new_line=shift_(row,k,axis=0)
-                    self.J1 = tf.concat([self.J1, new_line], 1)
-                except:
-                    self.J1 = row
-            row=shift_(row, self.strides,axis=0)
-            
-        del new_line
-        
-        col =np.zeros(shape=(1,self.Right_shape[0]))
-        col[0,0]=1
-        col=tf.constant(col, dtype=tf.float32)
-        for i in range(out_shape1):
-            for l in range(self.kernel_size):
-                try:
-                    new_line=shift_(col,l,axis=1)
-                    self.J2 = tf.concat([self.J2, new_line], 0)
-                except:
-                    self.J2 = col
-            col=shift_(col, self.strides,axis=1)
-
-    def call(self, inputs):
-
-        # -----------------------------------------------------------------------------------------------------
-        flatten = tf.reshape(inputs, shape=(-1, inputs.shape[1] * inputs.shape[2], inputs.shape[3]))
-        upFlatten = tf.matmul(a=self.matrix_pad, b=flatten)
-        inputs_x=tf.reshape(upFlatten, shape=(-1, inputs.shape[3],self.Right_shape[0] , self.Right_shape[0]))
-        inputs_y=tf.matmul(a=self.J2,b=tf.matmul(a=inputs_x,b=self.J1))
-        inputs_y=tf.reshape(inputs_y,shape=(-1, inputs_y.shape[2], inputs_y.shape[3], inputs_y.shape[1]))
-        # -----------------------------------------------------------------------------------------------------
-        
-        # -----------------------------------------------------------------------------------------------------
-        return inputs_y
-    
 class matrix_conv_1d(object):
+    """_summary_
+
+    Args:
+        object (_type_): _description_
+    """
     def __init__(self,  kernel_size=3,
                         stride=1,
                         padding=0,
@@ -590,6 +580,11 @@ class matrix_conv_1d(object):
 
 
 class matrix_conv_2d(object):
+    """_summary_
+
+    Args:
+        object (_type_): _description_
+    """
     def __init__(self, filters=1,
                  kernel_size=3,
                  strides=1,
