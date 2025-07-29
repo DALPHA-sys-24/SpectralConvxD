@@ -1,6 +1,7 @@
-from .SpecCnn1dLayer import SpecCnn1d
+from .specCnn1D import specCnn1D
 from .specCnn2D import SpecCnn2D
 from .models import SpectralCnn
 from .fetch_data import generate_data
+from .utils import extract_accuracy_and_save, plot_results,plot_benchmarks
 
 __version__ = "0.1.1"

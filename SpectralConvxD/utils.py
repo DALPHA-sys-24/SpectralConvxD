@@ -820,8 +820,3 @@ class matrix_conv_2d(object):
 
 if __name__ == '__main__':
     print("This is a module for simple convolutional operations. It contains functions and classes to handle convolution operations, including matrix representations and padding techniques.")
-    # Example usage:   
-    # conv_layer = matrix_conv_2d(filters=32, kernel_size=3, strides=1, padding='SAME')
-    # conv_layer.build(input_shape=(None, 64, 64, 3))  
-    # inputs = tf.random.uniform(shape=(1, 64, 64, 3))
-    # outputs = conv_layer.conv(inputs)
