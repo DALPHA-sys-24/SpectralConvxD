@@ -3,5 +3,6 @@ from .specCnn2D import SpecCnn2D
 from .models import SpectralCnn
 from .fetch_data import generate_data
 from .utils import extract_accuracy_and_save, plot_results,plot_benchmarks
+from .build_best_model import spec_tuner
 
 __version__ = "0.1.1"

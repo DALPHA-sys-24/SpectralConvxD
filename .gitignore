@@ -13,3 +13,4 @@ SpectralConvxD/*.txt
 build/
 .venv
 .idea
+*.txt
