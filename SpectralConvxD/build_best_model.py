@@ -35,7 +35,6 @@ def build_best_model(hp):
     return model
 
 def spec_tuner():
-
     x_train, y_train,x_test, y_test=generate_data(name_data='mnist1d')
 
     gpus = tf.config.list_physical_devices('GPU')
