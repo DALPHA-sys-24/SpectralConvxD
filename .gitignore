@@ -5,7 +5,7 @@ SpectralConvxD/*.png
 SpectralConvxD/*.pkl
 SpectralConvxD/*.sh
 SpectralConvxD/*.txt
-SpectralConvxD/Benchmarks_matrix_conv_*.ipynb
+SpectralConvxD/*.ipynb
 *.egg-info
 *.txt
 SpectralConvxD/.vscode/
@@ -20,3 +20,4 @@ SpectralConvxD/mon_env/
 build/
 .venv
 .idea
+*.pkl
