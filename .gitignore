@@ -1,23 +1,35 @@
-**/.vscode/
-**/.pytest_cache/
-**/.idea/
-**/tuner/
-**/Robustness/
-**/Data/
-**/_*_/
-**/mon_env/
-build/
-tuner/
-**/*.pdf
-**/*.out
-**/*.csv
-**/*.png
-**/*.pkl
-**/*.sh
-**/*.txt
-**/**/*.ipynb
-.venv
-.idea
-*.pkl
+# --- IDE & Configuration ---
+.vscode/
+.idea/
 *.egg-info
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pkl
+
+# --- Virtual Environments ---
+.venv/
+mon_env/
+
+# --- Notebooks ---
+*.ipynb
+
+# --- Outputs / Datasets ---
+*.out
+*.csv
 *.txt
+*.png
+*.sh
+
+# --- Build ---
+build/
+
+# --- Project Specific ---
+tuner/
+Robustness/
+Data/
+_*/
+
+# --- Caches ---
+.pytest_cache/
