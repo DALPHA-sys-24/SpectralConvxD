@@ -5,6 +5,7 @@ SpectralConvxD/*.png
 SpectralConvxD/*.pkl
 SpectralConvxD/*.sh
 SpectralConvxD/*.txt
+SpectralConvxD/Benchmark*.
 *.egg-info
 *.txt
 SpectralConvxD/.vscode/
