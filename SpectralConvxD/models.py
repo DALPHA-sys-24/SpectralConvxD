@@ -45,18 +45,18 @@ class SpectralCnn(object):
             self.model= tf.keras.Sequential()
             self.model.add(tf.keras.layers.Input(shape=self.hyperparameters.get('input_shape')))
             if self.hyperparameters.get('conxd')==1:
-                self.model.add(SpecCnn1D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn1d_config,activation=self.hyperparameters.get('activation')))
+                self.model.add(SpecCnn1D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn1d_config,activation=self.hyperparameters.get('activation'),name='spec_conv1D'))
                 self.model.add(tf.keras.layers.MaxPooling1D(pool_size=self.hyperparameters.get('pool_size'),**self.maxpooling_config))
             elif self.hyperparameters.get('conxd')==2:
-                self.model.add(SpecCnn2D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn2d_config,activation=self.hyperparameters.get('activation')))
+                self.model.add(SpecCnn2D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn2d_config,activation=self.hyperparameters.get('activation'),name='spec_conv2D'))
                 self.model.add(tf.keras.layers.MaxPooling2D(pool_size=self.hyperparameters.get('pool_size'),**self.maxpooling_config))
             else:
                 raise ValueError("conxd's value must be 1 or 2")
 
             self.model.add(tf.keras.layers.Flatten())
 
-            self.model.add(Spectral(units,**self.spectral_config, activation=self.hyperparameters.get('activation')))
-            self.model.add(Spectral(self.hyperparameters.get('labels'), **self.spectral_config, activation='softmax'))
+            self.model.add(Spectral(units,**self.spectral_config, activation=self.hyperparameters.get('activation'),name=f'spectral_{1}'))
+            self.model.add(Spectral(self.hyperparameters.get('labels'), **self.spectral_config, activation='softmax',name=f'spectral_{2}'))
 
             opt = tf.keras.optimizers.Adam(learning_rate=self.hyperparameters.get('learning_rate')) 
             self.model.compile(optimizer=opt, loss='sparse_categorical_crossentropy',metrics=['accuracy'])
@@ -69,7 +69,7 @@ class SpectralCnn(object):
         if name is None:
             raise ValueError("model's name must be defined")   
         if name != 'reference' and name != 'Dspec' and name != 'specConvXd':
-            raise ValueError("model's name must be 'reference', 'specCnn1d', or 'Dspec'")
+            raise ValueError("model's name must be 'reference', 'specConvXd', or 'Dspec'")
         if not isinstance(verbose, int):
             raise ValueError("verbose must be an integer") 
 
@@ -89,41 +89,48 @@ class SpectralCnn(object):
         self.old_weigths(layers)
         return history
     
-    def evaluate(self,x_test, y_test, name, order=0,layers=None,p=0):
+    def evaluate(self,x_test, y_test, path=None, name=None, order=0,layers=None,p=0):
+        """Evaluate the model on the test data.
+
+        Args:
+            x_test: Test input data.
+            y_test: Test target data.
+            path: Path to save accuracy results.
+            name: Model name.
+            order: Order/index for saving results.
+            layers: List of layer indices for weight operations.
+            p: Pruning/robustness parameter.
+
+        Returns:
+            Accuracy value if applicable.
+        """
         
         if name is None:
             raise ValueError("model's name must be defined")
-        if name != 'reference' and name != 'specCnnXd' and name != 'Dspec':
+        if name != 'reference' and name != 'specConvXd' and name != 'Dspec':
             raise ValueError("model's name must be 'reference', 'specConvXd' or 'Dspec'")
         if name!=self.name:
             raise ValueError("model's name must be the same as the one used in compile_models()")
         if x_test is None or y_test is None:
             raise ValueError("x_test and y_test must be defined")
-        if p<-1:
+        
+        if order <0 :
             raise NotImplemented("Fatal error")
-        
-        if order<0:
-            self.set_old_weigths(layers)
-            return self.model.evaluate(x_test, y_test, batch_size=self.hyperparameters.get('batch_size'), verbose="auto")[1]
-        
-        if p==-1:
-            accuracy=self.model.evaluate(x_test, y_test, batch_size=self.hyperparameters.get('batch_size'), verbose="auto")[1]
-            with open(f"Data/{name}/accuracy{p}_{order}.txt", "a+") as f:
-                f.write(str(accuracy))
-                f.write("\n")
-        
-        elif 0 <= p and p <= 1:
-            self.set_old_weigths(layers)
+        if p<0 or p>1:
+            raise NotImplemented("Fatal error")
+
+        if 0 <= p and p <= 1 and 0<= order:
+            # self.set_old_weigths(layers)
             self.p_robustness(layers,p,name)
             accuracy=self.model.evaluate(x_test, y_test, batch_size=self.hyperparameters.get('batch_size'), verbose="auto")[1]
-            with open(f"Robustness/Data/{name}/accuracy{p}_{order}.txt", "a+") as f:
+            with open(f"{path}/{name}/accuracy{p}_{order}.txt", "a+") as f:
                 f.write(str(accuracy))
                 f.write("\n")
             return accuracy
         else:
             raise NotImplemented("Fatal Error")
             
-        print(f"Accuracy of {name} model: {accuracy}")
+        
     
     def p_robustness(self,layers: List= [3],p=0.1,name=None):
         if name is None:
@@ -142,7 +149,7 @@ class SpectralCnn(object):
             for k,layer in enumerate(layers):
                 weigths=self.weigths[k]
                 # weigths[1]=self.mask_by_quantile(weigths[1], p)
-                cut_value = self.quantile_robust(weigths[1][0,:], p)
+                cut_value = self.percentile_robust(weigths[1][0,:], p)
                 self.cut_value.append(cut_value)
                 pruning_weights, percentage_zeroed = self.threshold_filter(cut_value, weigths[1][0,:])
                 self.percentage_zeroed.append(percentage_zeroed)
@@ -211,15 +218,18 @@ class SpectralCnn(object):
     
     
     
-    def quantile_robust(self,array, p)->float:
+    def percentile_robust(self, array, p) -> float:
         """
-        Calculate the quantile of an array, ignoring NaN values.
-        If the input is empty or contains only NaN values, raise a ValueError. 
+        Calculate the percentile of an array, ignoring NaN values.
+        If the input is empty or contains only NaN values, raise a ValueError.
+
         Parameters:
-        - array: numpy array containing the data.   
-        - p: float, the quantile to compute (between 0 and 1).
+        - array: numpy array or list containing the data.   
+        - p: float, the percentile to compute (between 0 and 1).
+
         Returns:      
-        - The quantile value.
+        - The percentile value.
+
         Raises:
         - ValueError: if p is not between 0 and 1, or if the array is empty or contains only NaN values.
         """
@@ -232,13 +242,14 @@ class SpectralCnn(object):
         if not isinstance(array, np.ndarray):
             raise ValueError("Input must be a numpy array")
         if array.size == 0:
-            raise ValueError( "Input array is empty")
+            raise ValueError("Input array is empty")
+
         # Remove NaN values
         array_clean = array[~np.isnan(array)]
-        
         if array_clean.size == 0:
-            raise ValueError(" Input array contains only NaN values")
-        return np.quantile(array_clean, p)
+            raise ValueError("Input array contains only NaN values")
+
+        return np.percentile(array_clean, p * 100)
 
 
     def threshold_filter(self, threshold, vector):

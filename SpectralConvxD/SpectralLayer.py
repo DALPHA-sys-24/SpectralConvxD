@@ -1,4 +1,5 @@
 from tensorflow.keras.layers import Layer, Dense
+
 from tensorflow.python.keras import activations, initializers, regularizers, constraints
 from tensorflow.python.util.tf_export import keras_export
 from tensorflow import multiply as mul
@@ -6,6 +7,7 @@ from tensorflow import reduce_sum
 from tensorflow import matmul
 import tensorflow as tf
 import numpy as np
+from tensorflow.keras.regularizers import l2
 
 
 @keras_export('keras.layers.Spectral')
@@ -113,7 +115,7 @@ class Spectral(Layer):
                 trainable=self.is_diag_start_trainable
             )
         else:
-            self.diag_start = tf.constant(np.ones((input_shape[-1], 1)),
+            self.diag_start = tf.constant(np.zeros((input_shape[-1], 1)),
                                          dtype=self.dtype)
             
 

@@ -9,6 +9,19 @@ from tensorflow.keras import activations, initializers
 from .fetch_data import *
 
 
+
+def remplacer_backslash(chaine):
+    """
+    Remplace tous les backslashes (\) par des slashes (/) dans une chaîne.
+    
+    Args:
+        chaine (str): La chaîne de caractères à modifier
+    
+    Returns:
+        str: La chaîne avec les backslashes remplacés par des slashes
+    """
+    return chaine.replace('\\', '/')
+
 def get_accuracy(name_file="SpecConv2dClassique",i=1,PATH="C:/Users/jketchak/OneDrive - Université de Namur/Bureau/DALPHAcommunity/UNAMUR/MATHESES/PUBLICATIONS/DONNEES/Convolution Neural Networks in the spectral"):
     """_summary_
 
@@ -29,7 +42,7 @@ def get_accuracy(name_file="SpecConv2dClassique",i=1,PATH="C:/Users/jketchak/One
     return data
 
 
-def extract_accuracy_and_save(replication, depth,drop=None,name=None):
+def extract_accuracy_and_save(replication, depth,drop=None,name=None,path=None):
     """_summary_
 
     Args:
@@ -51,7 +64,7 @@ def extract_accuracy_and_save(replication, depth,drop=None,name=None):
             raise ValueError("Name must be provided for the dataset.")
 
         for order in range(replication['rep']):
-            with open(f"Data/{name}/accuracy{order}.txt", "r") as f:
+            with open(f"{path}/{name}/accuracy{order}.txt", "r") as f:
                 accuracy[order]=pd.read_csv(f, sep=" ", header=None)
                 accuracy[order].rename(columns={0:f"r{order+1}"},inplace=True)
         data=accuracy[0]
@@ -68,13 +81,13 @@ def extract_accuracy_and_save(replication, depth,drop=None,name=None):
         data["q2"]=data[[f"r{order+1}" for order in  range(replication['rep']) ]].quantile(0.75,axis=1)
         data["med"]=data[[f"r{order+1}" for order in  range(replication['rep']) ]].median(axis=1)
         data["sigma"]= data[[f"r{order+1}" for order in  range(replication['rep']) ]].std(axis=1)
-        data.to_csv(f"Data/{name}/{name}.csv", header=True, index=True)
+        data.to_csv(f"{path}/{name}/{name}.csv", header=True, index=True)
     
     else:           
         accuracy:Dict[int,Dict[int,pd.DataFrame]]={i: {} for i in range(len(drop.get('p')))}
         for k,p in enumerate(drop.get('p')):
             for order in range(replication['rep']):
-                with open(f"Robustness/Data/{name}/accuracy{p}_{order}.txt", "r") as f:
+                with open(f"{path}/{name}/accuracy{p}_{order}.txt", "r") as f:
                     accuracy[k][order]=pd.read_csv(f, sep=" ", header=None)
         
                             
@@ -88,7 +101,7 @@ def extract_accuracy_and_save(replication, depth,drop=None,name=None):
         data["q2"]=data[[order for order in  range(replication['rep']) ]].quantile(0.75,axis=1)
         data["med"]=data[[order for order in  range(replication['rep']) ]].median(axis=1)
         data["sigma"]= data[[order for order in  range(replication['rep'])]].std(axis=1)
-        data.to_csv(f"Robustness/Data/{name}/{name}.csv", header=True, index=True)
+        data.to_csv(f"{path}/{name}/{name}.csv", header=True, index=True)
     return data
 
 

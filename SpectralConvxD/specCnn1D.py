@@ -18,9 +18,10 @@ class SpecCnn1D(Layer):
                     bias_initializer='zeros',
                     phi_initializer="glorot_uniform",
                     lambda_in_initializer="glorot_uniform",
-                    lambda_out_initializer="glorot_uniform"):
+                    lambda_out_initializer="glorot_uniform",
+                    **kwargs):
 
-        super(SpecCnn1D,self).__init__()
+        super(SpecCnn1D,self).__init__(**kwargs)
 
         self.filters = filters
         self.kernel_size = kernel_size

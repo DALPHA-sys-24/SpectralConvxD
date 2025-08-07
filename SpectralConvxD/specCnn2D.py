@@ -21,9 +21,10 @@ class SpecCnn2D(Layer):
                  kernel_initializer="glorot_uniform",
                  pruning_initializer="glorot_uniform",
                  encoding_initializer="glorot_uniform",
-                 activation="relu"):
+                 activation="relu",
+                 **kwargs):
 
-        super(SpecCnn2D,self).__init__()
+        super(SpecCnn2D,self).__init__(**kwargs)
 
         self.filters = filters
         self.strides = strides
