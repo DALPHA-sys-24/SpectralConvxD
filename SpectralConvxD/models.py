@@ -2,7 +2,9 @@ from .utils import *
 from .SpectralLayer import *
 from .specCnn1D import *
 from .specCnn2D import *
-
+import copy
+import tensorflow as tf 
+import numpy as np 
 
 
 
@@ -12,8 +14,9 @@ class SpectralCnn(object):
         self.hyperparameters=hyperparameters
         self.percentage_zeroed=[]
         self.cut_value=[]
+        self.trainable_weigths={}
         
-    def compile_models(self,units:int= 1000,spectral_config=None,spectral_cnn1d_config=None,spectral_cnn2d_config=None, name:str=None):
+    def compile_models(self,units:int= 1000,spectral_config=None,spectral_cnn1d_config=None,spectral_cnn2d_config=None, name:str=None,layers_name=None):
         """_summary_
 
         Args:
@@ -31,33 +34,65 @@ class SpectralCnn(object):
             ValueError: _description_
             ValueError: _description_
         """
-        if name is None:
+        
+        self.name=name
+        self.layers_name=layers_name
+        if len(self.layers_name)!=3:
+            raise ValueError("layers_name must have exactly 3 elements")
+        if self.name is None:
             raise ValueError("model's name must be defined")
         if not isinstance(units, int):
             raise ValueError("hyperparameters must be a dictionary")
         
-        self.name=name
+        if self.hyperparameters.get('use_pruning') and self.name=='specConvXd':
+            print("Pruning: Ranking the Nodes Based on the Eigenvalues")
+            spectral_config['is_base_trainable']=True
+            spectral_cnn1d_config['use_lambda_in']=False
+            spectral_cnn1d_config['trainable_phi']=True
+            
+        elif  self.hyperparameters.get('use_pruning') and self.name=='reference':
+            print("Pruning: Absolute value of the incoming connectivity collapse")
+        
+        elif self.hyperparameters.get('use_pruning')==False and self.name in ['reference','specConvXd']:
+            print("Pruning: Pershaps pre-training")
+        
+        else:
+            raise ValueError("No pruning for this model")
+            
+            
         self.set_spectral_config(spectral_config)
         self.set_spectral_cnn1d_config(spectral_cnn1d_config)
-        self.set_spectral_cnn2d_config(spectral_cnn2d_config)        
+        self.set_spectral_cnn2d_config(spectral_cnn2d_config)
+        
+        
+        if self.hyperparameters.get('pre_training') and self.name=='specConvXd':
+            self. spectral_cnn1d_config['use_lambda_in']=False
+            self.spectral_cnn1d_config['trainable_phi']=True 
 
         if  self.name in  ['reference','Dspec','specConvXd']:
             self.model= tf.keras.Sequential()
             self.model.add(tf.keras.layers.Input(shape=self.hyperparameters.get('input_shape')))
             if self.hyperparameters.get('conxd')==1:
-                self.model.add(SpecCnn1D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn1d_config,activation=self.hyperparameters.get('activation'),name='spec_conv1D'))
+                self.model.add(SpecCnn1D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn1d_config,activation=self.hyperparameters.get('activation'),name=self.layers_name[0]))
                 self.model.add(tf.keras.layers.MaxPooling1D(pool_size=self.hyperparameters.get('pool_size'),**self.maxpooling_config))
             elif self.hyperparameters.get('conxd')==2:
-                self.model.add(SpecCnn2D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn2d_config,activation=self.hyperparameters.get('activation'),name='spec_conv2D'))
+                self.model.add(SpecCnn2D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn2d_config,activation=self.hyperparameters.get('activation'),name=self.layers_name[0]))
                 self.model.add(tf.keras.layers.MaxPooling2D(pool_size=self.hyperparameters.get('pool_size'),**self.maxpooling_config))
             else:
                 raise ValueError("conxd's value must be 1 or 2")
 
             self.model.add(tf.keras.layers.Flatten())
 
-            self.model.add(Spectral(units,**self.spectral_config, activation=self.hyperparameters.get('activation'),name=f'spectral_{1}'))
-            self.model.add(Spectral(self.hyperparameters.get('labels'), **self.spectral_config, activation='softmax',name=f'spectral_{2}'))
-
+            self.model.add(Spectral(units,**self.spectral_config, activation=self.hyperparameters.get('activation'),name=self.layers_name[1]))
+            
+            
+            if self.hyperparameters.get('pre_training') and self.name=='specConvXd':
+                print("Pre training: Spectral robustness")
+                self.spectral_config['is_base_trainable']=True
+                self.spectral_config['is_diag_end_trainable']=False
+            
+            self.model.add(Spectral(self.hyperparameters.get('labels'), **self.spectral_config, activation='softmax',name=self.layers_name[2]))
+            
             opt = tf.keras.optimizers.Adam(learning_rate=self.hyperparameters.get('learning_rate')) 
             self.model.compile(optimizer=opt, loss='sparse_categorical_crossentropy',metrics=['accuracy'])
         else:
@@ -65,7 +100,7 @@ class SpectralCnn(object):
         
         self.hyperparameters['units']=units
     
-    def train(self,x_train, y_train, x_test=None, y_test=None,name=None,verbose=0,layers=None):
+    def train(self,x_train, y_train, x_test=None, y_test=None,name=None,verbose=0):
         if name is None:
             raise ValueError("model's name must be defined")   
         if name != 'reference' and name != 'Dspec' and name != 'specConvXd':
@@ -85,9 +120,9 @@ class SpectralCnn(object):
             history = self.model.fit(x_train, y_train, batch_size=self.hyperparameters.get('batch_size'),
                                      epochs=self.hyperparameters.get('epochs'), verbose=verbose,
                                      validation_data=(x_test, y_test))
-        
-        self.old_weigths(layers)
-        return history
+            
+        self.history=history
+        self.trainable_weigths={name:[var for var in self.model.get_layer(name=name).trainable_variables] for name in self.layers_name}
     
     def evaluate(self,x_test, y_test, path=None, name=None, order=0,layers=None,p=0):
         """Evaluate the model on the test data.
@@ -118,9 +153,8 @@ class SpectralCnn(object):
             raise NotImplemented("Fatal error")
         if p<0 or p>1:
             raise NotImplemented("Fatal error")
-
+        
         if 0 <= p and p <= 1 and 0<= order:
-            # self.set_old_weigths(layers)
             self.p_robustness(layers,p,name)
             accuracy=self.model.evaluate(x_test, y_test, batch_size=self.hyperparameters.get('batch_size'), verbose="auto")[1]
             with open(f"{path}/{name}/accuracy{p}_{order}.txt", "a+") as f:
@@ -130,14 +164,17 @@ class SpectralCnn(object):
         else:
             raise NotImplemented("Fatal Error")
             
-        
+
     
-    def p_robustness(self,layers: List= [3],p=0.1,name=None):
+    def p_robustness(self,layers: List= [3],p=0,name=None,w=None):
         if name is None:
             raise ValueError("model's name must be defined")
         if name=='reference':
             for k,layer in enumerate(layers):
-                weigths=self.weigths[k]
+                if w is None:
+                    weigths=copy.deepcopy(self.weigths[k])
+                else:
+                    weigths=w
                 # units=weigths[0].shape[1]
                 result, collapsed_indices, row_sums, threshold_value=self.absolute_value_of_the_incoming_connectivity_collapse(weigths[0], p)
                 assert result.shape==weigths[0].shape
@@ -147,7 +184,10 @@ class SpectralCnn(object):
                 self.model.layers[layer].set_weights(weigths)
         else: 
             for k,layer in enumerate(layers):
-                weigths=self.weigths[k]
+                if w is None:
+                    weigths=copy.deepcopy(self.weigths[k])
+                else:
+                    weigths=w
                 # weigths[1]=self.mask_by_quantile(weigths[1], p)
                 cut_value = self.percentile_robust(weigths[1][0,:], p)
                 self.cut_value.append(cut_value)
@@ -292,16 +332,7 @@ class SpectralCnn(object):
         result[result < threshold] = 0
         
         return result, percentage_zeroed
-    
-    def old_weigths(self,layers:Tuple):
-        self.weigths:List[Any]=list()
-        for layer in layers:
-            self.weigths.append(self.model.layers[layer].get_weights())
-            
 
-    def set_old_weigths(self,layers:Tuple):
-        for k,layer in enumerate(layers):
-            self.model.layers[layer].set_weights(self.weigths[k])
   
     def summary(self,name):
         if name is None:
@@ -346,7 +377,14 @@ class SpectralCnn(object):
 
         # Reshape back to original shape
         return tf.reshape(modified_flat, original_shape)
-            
+    
+        
+    def get_trainable_weigths(self,layers_name=None):
+        return self.trainable_weights
+
+    def set_trainable_weigths(self,trainable_weights=None):
+        self.trainable_weights=trainable_weights
+    
     def get_maxpooling_config(self):
         return self.maxpooling_config
     

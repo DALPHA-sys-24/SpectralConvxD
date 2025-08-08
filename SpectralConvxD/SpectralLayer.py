@@ -83,7 +83,7 @@ class Spectral(Layer):
             )
         else:
             self.base = tf.constant(np.random.uniform(low=-0.5, high=0.5,size=(input_shape[-1], self.units)),
-                                         dtype=self.dtype)
+                                         dtype=self.dtype,name='base')
 
         # trainable eigenvalues
         # \lambda_i
@@ -100,7 +100,8 @@ class Spectral(Layer):
         else:
            self.diag_end  = tf.constant(np.random.uniform(low=-0.05,
                                         high=0.05,size=(1,self.units)),
-                                        dtype=self.dtype)
+                                        dtype=self.dtype,
+                                        name='diag_end')
             
 
         # \lambda_j
@@ -116,7 +117,8 @@ class Spectral(Layer):
             )
         else:
             self.diag_start = tf.constant(np.zeros((input_shape[-1], 1)),
-                                         dtype=self.dtype)
+                                         dtype=self.dtype,
+                                         name='diag_start')
             
 
         # bias
@@ -128,7 +130,7 @@ class Spectral(Layer):
                 regularizer=self.bias_regularizer,
                 constraint=self.bias_constraint,
                 dtype=self.dtype,
-                trainable=True)
+                trainable=self.use_bias)
         else:
             self.bias = None
 
