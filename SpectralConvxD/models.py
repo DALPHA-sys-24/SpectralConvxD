@@ -14,12 +14,14 @@ class SpectralCnn(object):
         self.hyperparameters=hyperparameters
         self.percentage_zeroed=[]
         self.cut_value=[]
-        self.trainable_weigths={}
+        self.trainable_weights={}
         
-    def compile_models(self,units:int= 1000,spectral_config=None,spectral_cnn1d_config=None,spectral_cnn2d_config=None, name:str=None,layers_name=None):
+    def compile_models(self,units:int= 1000,spectral_config=None,spectral_cnn1d_config=None,spectral_cnn2d_config=None, name:str=None,layers_name=None,trainable_weights=None,layer_cible=None):
         """_summary_
 
         Args:
+            layers_name (list, optional): _description_. Defaults to ['convx','spec1','spec2'].
+            trainable_weights (list, optional): _description_. Defaults to None.
             units (int, optional): _description_. Defaults to 1000.
             spectral_config (_type_, optional): _description_. Defaults to None.
             spectral_cnn1d_config (_type_, optional): _description_. Defaults to None.
@@ -37,6 +39,8 @@ class SpectralCnn(object):
         
         self.name=name
         self.layers_name=layers_name
+        if layer_cible is not None and layer_cible not in layers_name:
+            raise ValueError("layer_cible must be one of the layers in layers_name")
         if len(self.layers_name)!=3:
             raise ValueError("layers_name must have exactly 3 elements")
         if self.name is None:
@@ -58,47 +62,65 @@ class SpectralCnn(object):
         
         else:
             raise ValueError("No pruning for this model")
-            
-            
-        self.set_spectral_config(spectral_config)
-        self.set_spectral_cnn1d_config(spectral_cnn1d_config)
-        self.set_spectral_cnn2d_config(spectral_cnn2d_config)
         
         
         if self.hyperparameters.get('pre_training') and self.name=='specConvXd':
-            self. spectral_cnn1d_config['use_lambda_in']=False
-            self.spectral_cnn1d_config['trainable_phi']=True 
+            spectral_cnn1d_config['use_lambda_in']=False
+            spectral_cnn1d_config['trainable_phi']=True 
 
         if  self.name in  ['reference','Dspec','specConvXd']:
             self.model= tf.keras.Sequential()
             self.model.add(tf.keras.layers.Input(shape=self.hyperparameters.get('input_shape')))
             if self.hyperparameters.get('conxd')==1:
-                self.model.add(SpecCnn1D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn1d_config,activation=self.hyperparameters.get('activation'),name=self.layers_name[0]))
+                if self.hyperparameters.get('post_training') and self.name=='specConvXd':
+                    print("Post training: Spectral compactness")
+                    spectral_cnn1d_config['use_lambda_in']=False
+                    spectral_cnn1d_config['trainable_phi']=True 
+                self.model.add(SpecCnn1D(filters=self.hyperparameters.get('filters'),activation=self.hyperparameters.get('activation'),name=self.layers_name[0],**spectral_cnn1d_config))
                 self.model.add(tf.keras.layers.MaxPooling1D(pool_size=self.hyperparameters.get('pool_size'),**self.maxpooling_config))
             elif self.hyperparameters.get('conxd')==2:
-                self.model.add(SpecCnn2D(filters=self.hyperparameters.get('filters'), **self.spectral_cnn2d_config,activation=self.hyperparameters.get('activation'),name=self.layers_name[0]))
+                self.model.add(SpecCnn2D(filters=self.hyperparameters.get('filters'),activation=self.hyperparameters.get('activation'),name=self.layers_name[0],**spectral_cnn2d_config))
                 self.model.add(tf.keras.layers.MaxPooling2D(pool_size=self.hyperparameters.get('pool_size'),**self.maxpooling_config))
             else:
                 raise ValueError("conxd's value must be 1 or 2")
 
             self.model.add(tf.keras.layers.Flatten())
 
-            self.model.add(Spectral(units,**self.spectral_config, activation=self.hyperparameters.get('activation'),name=self.layers_name[1]))
+
+            if self.hyperparameters.get('post_training') and self.name=='specConvXd':
+                print("Post training: Spectral compactness")
+                spectral_config['is_base_trainable']=True
+                spectral_config['is_diag_end_trainable']=False
+            
+            
+            self.model.add(Spectral(units, activation=self.hyperparameters.get('activation'),name=self.layers_name[1],**spectral_config))
             
             
             if self.hyperparameters.get('pre_training') and self.name=='specConvXd':
                 print("Pre training: Spectral robustness")
-                self.spectral_config['is_base_trainable']=True
-                self.spectral_config['is_diag_end_trainable']=False
+                spectral_config['is_base_trainable']=True
+                spectral_config['is_diag_end_trainable']=False
             
-            self.model.add(Spectral(self.hyperparameters.get('labels'), **self.spectral_config, activation='softmax',name=self.layers_name[2]))
+            self.model.add(Spectral(self.hyperparameters.get('labels'), **spectral_config, activation='softmax',name=self.layers_name[2]))
             
+            if trainable_weights is not None and  layer_cible in layers_name:
+                self.model.get_layer(name=layer_cible).set_weights(trainable_weights)
+            elif trainable_weights is not None and layer_cible is None:
+                raise ValueError("layer_cible must be one of the layers in layers_name")
+            elif trainable_weights is None and layer_cible is not None:
+                raise ValueError("trainable_weights must be defined and layer_cible must be one of the layers in layers_name")
+            elif trainable_weights is None and layer_cible is None:
+                print("No trainable weights provided, using default initialization")
             opt = tf.keras.optimizers.Adam(learning_rate=self.hyperparameters.get('learning_rate')) 
             self.model.compile(optimizer=opt, loss='sparse_categorical_crossentropy',metrics=['accuracy'])
         else:
             raise ValueError("model's name must be 'reference' ,'Dspec',or 'specConvXd'")
         
-        self.hyperparameters['units']=units
+        self.hyperparameters.update({'units':units,
+                                        'spectral_config':spectral_config,
+                                        'spectral_cnn1d_config': spectral_cnn1d_config,
+                                        'spectral_cnn2d_config': spectral_cnn2d_config})
+        
     
     def train(self,x_train, y_train, x_test=None, y_test=None,name=None,verbose=0):
         if name is None:
@@ -120,20 +142,22 @@ class SpectralCnn(object):
             history = self.model.fit(x_train, y_train, batch_size=self.hyperparameters.get('batch_size'),
                                      epochs=self.hyperparameters.get('epochs'), verbose=verbose,
                                      validation_data=(x_test, y_test))
-            
+        
+        self.trainable_weights.update({name:[var for var in self.model.get_layer(name=name).trainable_variables] for name in self.layers_name})
         self.history=history
-        self.trainable_weigths={name:[var for var in self.model.get_layer(name=name).trainable_variables] for name in self.layers_name}
+        
     
-    def evaluate(self,x_test, y_test, path=None, name=None, order=0,layers=None,p=0):
+    def evaluate(self,x_test, y_test, trainable_weights=None, path=None, name=None, order=0,layer_name=None,p=0):
         """Evaluate the model on the test data.
 
         Args:
+            trainable_weights (list): List of trainable weights to filter.
             x_test: Test input data.
             y_test: Test target data.
             path: Path to save accuracy results.
             name: Model name.
             order: Order/index for saving results.
-            layers: List of layer indices for weight operations.
+            layers: Name of layer for weight operations.
             p: Pruning/robustness parameter.
 
         Returns:
@@ -149,21 +173,80 @@ class SpectralCnn(object):
         if x_test is None or y_test is None:
             raise ValueError("x_test and y_test must be defined")
         
-        if order <0 :
+        if not 0<= order:
             raise NotImplemented("Fatal error")
-        if p<0 or p>1:
+        if not 0<= p <=1:
             raise NotImplemented("Fatal error")
         
         if 0 <= p and p <= 1 and 0<= order:
-            self.p_robustness(layers,p,name)
+            weight_filter=self.percentile_spectral_filter(trainable_weights=trainable_weights, name=name, layer_name=layer_name,p=p)
+            self.model.get_layer(name=layer_name).set_weights(weight_filter)
             accuracy=self.model.evaluate(x_test, y_test, batch_size=self.hyperparameters.get('batch_size'), verbose="auto")[1]
             with open(f"{path}/{name}/accuracy{p}_{order}.txt", "a+") as f:
                 f.write(str(accuracy))
                 f.write("\n")
+            self.model.get_layer(name=layer_name).set_weights(self.trainable_weigths[layer_name])
             return accuracy
         else:
             raise NotImplemented("Fatal Error")
-            
+        
+    
+    
+    
+    def percentile_spectral_filter(self, trainable_weights=None, name=None, layer_name=None,p=0.0):
+        """
+        Filters the trainable weights of the model based on a percentile threshold.
+        
+        Args:
+            trainable_weights (list): List of trainable weights to filter.
+            name (str): Name of the model.
+            p (float): Percentile threshold for filtering (0.0-1.0).
+        
+        Returns:
+            list: Filtered trainable weights.
+        """
+        if name is None:
+            raise ValueError("model's name must be defined")
+        if not isinstance(p, (int, float)):
+            raise ValueError("p must be a number")
+        if not 0 <= p <= 1:
+            raise ValueError("p must be between 0 and 1")
+    
+     
+        if trainable_weights is None:
+            if layer_name in self.layers_name:
+                tw_copy= copy.deepcopy(self.trainable_weights[layer_name])
+            else:
+                raise ValueError("layer_name must be one of the layers in the model")
+        else:
+            tw_copy = copy.deepcopy(trainable_weights)
+   
+        if name not in ['reference', 'specConvXd', 'Dspec']:
+            raise ValueError("model's name must be 'reference', 'specConvXd' or 'Dspec'")
+        if name =='specConvXd':
+            for k,var in enumerate(tw_copy):
+                if var.name=='diag_end':
+                    cut_value=self.percentile_robust(var.numpy(),p)
+                    pruning_weights, percentage_zeroed = self.threshold_filter(cut_value, var.numpy())
+                    if np.allclose(var.numpy(),pruning_weights,atol=1e-16):
+                        print("Done")
+                    tw_copy[k].assign(pruning_weights)   
+            return tw_copy
+        
+        elif name=='reference':
+            for k,var in enumerate(tw_copy):
+                print(var)
+                if var.name=='base':
+                    result, collapsed_indices, row_sums, threshold_value=self.absolute_value_of_the_incoming_connectivity_collapse(var.numpy(), p)
+                    if np.allclose(var.numpy(),result,atol=1e-16):
+                        print("Done")
+                    tw_copy[k].assign(result)
+            return tw_copy
+        
+        elif name=='Dspec':
+            raise NotImplemented("Dspec model does not support percentile spectral filter")
+        else:
+            raise ValueError("model's name must be 'reference', 'specConvXd' or 'Dspec'")   
 
     
     def p_robustness(self,layers: List= [3],p=0,name=None,w=None):
@@ -379,8 +462,8 @@ class SpectralCnn(object):
         return tf.reshape(modified_flat, original_shape)
     
         
-    def get_trainable_weigths(self,layers_name=None):
-        return self.trainable_weights
+    def get_trainable_weights(self,layer_name=None):
+        return self.trainable_weights[layer_name]
 
     def set_trainable_weigths(self,trainable_weights=None):
         self.trainable_weights=trainable_weights

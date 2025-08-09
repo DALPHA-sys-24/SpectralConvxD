@@ -9,6 +9,93 @@ from tensorflow.keras import activations, initializers
 from .fetch_data import *
 
 
+def pars():
+    models_pars={'reference':
+                    {"spectral_config":{'is_base_trainable': True,
+                                        'is_diag_start_trainable': False,
+                                        'is_diag_end_trainable': False,
+                                        'use_bias': True
+                                        },
+                     "spectral_cnn1d_config":{ 'kernel_size': 3,
+                                                'stride': 1,
+                                                'padding': 0,
+                                                'trainable_phi':True,
+                                                'use_lambda_out':False,
+                                                'use_lambda_in' : False,
+                                                'use_bias': True
+                                              },
+                     "spectral_cnn2d_config":{ 'kernel_size': 3,
+                                                'strides': 1,
+                                                'padding': 'VALID',
+                                                "use_lambda_out":False,
+                                                "use_lambda_in":False,
+                                                "use_encode":False,
+                                                "use_decode":False,
+                                                'use_bias': True,
+                                                "trainable_omega_diag":True,
+                                                "trainable_omega_triu":True,
+                                                "trainable_omega_tril":True,
+                                                "trainable_aggregate":False,
+                                                }
+                    },
+                    
+             'Dspec':{"spectral_config":{ 'is_base_trainable': True,
+                                        'is_diag_start_trainable': False,
+                                        'is_diag_end_trainable': False,
+                                        'use_bias': True
+                                        },
+                     "spectral_cnn1d_config":{ 'kernel_size': 3,
+                                                'stride': 1,
+                                                'padding': 0,
+                                                'trainable_phi':True,
+                                                'use_lambda_out':False,
+                                                'use_lambda_in' : True,
+                                                'use_bias': True
+                                              },
+                     "spectral_cnn2d_config":{ 'kernel_size': 3,
+                                                'strides': 1,
+                                                'padding': 'VALID',
+                                                "use_lambda_out":False,
+                                                "use_lambda_in":False,
+                                                "use_encode":False,
+                                                "use_decode":True,
+                                                'use_bias': True,
+                                                "trainable_omega_diag":False,
+                                                "trainable_omega_triu":False,
+                                                "trainable_omega_tril":False,
+                                                "trainable_aggregate":False,
+                                                }
+                    },
+             
+             'specConvXd':{"spectral_config":{ 'is_base_trainable': False,
+                                        'is_diag_start_trainable': False,
+                                        'is_diag_end_trainable': True,
+                                        'use_bias': True
+                                        },
+                     "spectral_cnn1d_config":{ 'kernel_size': 3,
+                                                'stride': 1,
+                                                'padding': 1,
+                                                'trainable_phi':True,
+                                                'use_lambda_out':False,
+                                                'use_lambda_in' : True,
+                                                'use_bias': True
+                                              },
+                     "spectral_cnn2d_config":{ 'kernel_size': 3,
+                                                'strides': 1,
+                                                'padding': 'VALID',
+                                                "use_lambda_out":False,
+                                                "use_lambda_in":False,
+                                                "use_encode":False,
+                                                "use_decode":True,
+                                                'use_bias': True,
+                                                "trainable_omega_diag":False,
+                                                "trainable_omega_triu":False,
+                                                "trainable_omega_tril":False,
+                                                "trainable_aggregate":False,
+                                                }
+                    }
+            }
+    return models_pars,list(models_pars.keys())
 
 def remplacer_backslash(chaine):
     """

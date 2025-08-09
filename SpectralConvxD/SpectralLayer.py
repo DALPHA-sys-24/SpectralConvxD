@@ -20,7 +20,7 @@ class Spectral(Layer):
                  is_diag_end_trainable=True,
                  use_bias=False,
                  base_initializer='GlorotUniform',
-                 diag_start_initializer='optimized_uniform',
+                 diag_start_initializer='zeros',
                  diag_end_initializer='optimized_uniform',
                  bias_initializer='zeros',
                  base_regularizer=None,
@@ -71,54 +71,42 @@ class Spectral(Layer):
 
         # trainable eigenvector elements matrix
         # \phi_ij
-        if self.is_base_trainable:
-            self.base = self.add_weight(
-                name='base',
-                shape=(input_shape[-1], self.units),
-                initializer=self.base_initializer,
-                regularizer=self.base_regularizer,
-                constraint=self.base_constraint,
-                dtype=self.dtype,
-                trainable=self.is_base_trainable
-            )
-        else:
-            self.base = tf.constant(np.random.uniform(low=-0.5, high=0.5,size=(input_shape[-1], self.units)),
-                                         dtype=self.dtype,name='base')
+
+        self.base = self.add_weight(
+            name='base',
+            shape=(input_shape[-1], self.units),
+            initializer=self.base_initializer,
+            regularizer=self.base_regularizer,
+            constraint=self.base_constraint,
+            dtype=self.dtype,
+            trainable=self.is_base_trainable
+        )
 
         # trainable eigenvalues
         # \lambda_i
-        if self.is_diag_end_trainable:
-            self.diag_end = self.add_weight(
-                name='diag_end',
-                shape=(1, self.units),
-                initializer=self.diag_end_initializer,
-                regularizer=self.diag_regularizer,
-                constraint=self.diag_constraint,
-                dtype=self.dtype,
-                trainable=self.is_diag_end_trainable
-            )
-        else:
-           self.diag_end  = tf.constant(np.random.uniform(low=-0.05,
-                                        high=0.05,size=(1,self.units)),
-                                        dtype=self.dtype,
-                                        name='diag_end')
+        self.diag_end = self.add_weight(
+            name='diag_end',
+            shape=(1, self.units),
+            initializer=self.diag_end_initializer,
+            regularizer=self.diag_regularizer,
+            constraint=self.diag_constraint,
+            dtype=self.dtype,
+            trainable=self.is_diag_end_trainable
+        )
+
             
 
         # \lambda_j
-        if self.is_diag_start_trainable:
-            self.diag_start = self.add_weight(
-                name='diag_start',
-                shape=(input_shape[-1], 1),
-                initializer=self.diag_start_initializer,
-                regularizer=self.diag_regularizer,
-                constraint=self.diag_constraint,
-                dtype=self.dtype,
-                trainable=self.is_diag_start_trainable
-            )
-        else:
-            self.diag_start = tf.constant(np.zeros((input_shape[-1], 1)),
-                                         dtype=self.dtype,
-                                         name='diag_start')
+        self.diag_start = self.add_weight(
+            name='diag_start',
+            shape=(input_shape[-1], 1),
+            initializer=self.diag_start_initializer,
+            regularizer=self.diag_regularizer,
+            constraint=self.diag_constraint,
+            dtype=self.dtype,
+            trainable=self.is_diag_start_trainable
+        )
+
             
 
         # bias
