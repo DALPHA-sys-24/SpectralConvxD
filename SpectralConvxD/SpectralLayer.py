@@ -24,12 +24,13 @@ class Spectral(Layer):
                  diag_end_initializer='optimized_uniform',
                  bias_initializer='zeros',
                  base_regularizer=None,
-                 diag_regularizer=None,
+                 diag_regularizer=l2(5E-2),
                  bias_regularizer=None,
                  activity_regularizer=None,
                  base_constraint=None,
                  diag_constraint=None,
                  bias_constraint=None,
+                 trainable_weights_diag_end=None,
                  **kwargs):
 
         super(Spectral, self).__init__(
@@ -42,6 +43,8 @@ class Spectral(Layer):
         self.is_diag_start_trainable = is_diag_start_trainable
         self.is_diag_end_trainable = is_diag_end_trainable
         self.use_bias = use_bias
+        self.trainable_weights_diag_end = trainable_weights_diag_end
+        
 
         # 'optimized_uniform' initializers optmized by Buffoni and Giambagli
         if base_initializer == 'optimized_uniform':
@@ -55,7 +58,12 @@ class Spectral(Layer):
             self.diag_start_initializer = initializers.get(diag_start_initializer)
 
         if diag_end_initializer == 'optimized_uniform':
-            self.diag_end_initializer = initializers.RandomUniform(-0.5, 0.5)
+            self.diag_end_initializer = initializers.RandomUniform(-0.1, 0.1)
+        # elif diag_end_initializer == 'custom':
+        #     if self.trainable_weights_diag_end is not  None:
+        #         self.diag_end_initializer = CustomInitializer_diag_end(self.trainable_weights_diag_end)
+        #     else:
+        #         raise ValueError("trainable_weights_diag_end must be a Tensor")
         else:
             self.diag_end_initializer = initializers.get(diag_end_initializer)
 
@@ -71,19 +79,23 @@ class Spectral(Layer):
 
         # trainable eigenvector elements matrix
         # \phi_ij
-
-        self.base = self.add_weight(
-            name='base',
-            shape=(input_shape[-1], self.units),
-            initializer=self.base_initializer,
-            regularizer=self.base_regularizer,
-            constraint=self.base_constraint,
-            dtype=self.dtype,
-            trainable=self.is_base_trainable
-        )
+        if self.is_base_trainable:
+            self.base = self.add_weight(
+                name='base',
+                shape=(input_shape[-1], self.units),
+                initializer=self.base_initializer,
+                regularizer=self.base_regularizer,
+                constraint=self.base_constraint,
+                dtype=self.dtype,
+                trainable=self.is_base_trainable
+            )
+        else:
+            self.base = tf.constant(np.random.uniform(low=-0.5, high=0.5,size=(input_shape[-1], self.units)),
+                                         dtype=self.dtype,name='base')
 
         # trainable eigenvalues
         # \lambda_i
+
         self.diag_end = self.add_weight(
             name='diag_end',
             shape=(1, self.units),
@@ -94,19 +106,22 @@ class Spectral(Layer):
             trainable=self.is_diag_end_trainable
         )
 
-            
 
         # \lambda_j
-        self.diag_start = self.add_weight(
-            name='diag_start',
-            shape=(input_shape[-1], 1),
-            initializer=self.diag_start_initializer,
-            regularizer=self.diag_regularizer,
-            constraint=self.diag_constraint,
-            dtype=self.dtype,
-            trainable=self.is_diag_start_trainable
-        )
-
+        if self.is_diag_start_trainable:
+            self.diag_start = self.add_weight(
+                name='diag_start',
+                shape=(input_shape[-1], 1),
+                initializer=self.diag_start_initializer,
+                regularizer=self.diag_regularizer,
+                constraint=self.diag_constraint,
+                dtype=self.dtype,
+                trainable=self.is_diag_start_trainable
+            )
+        else:
+            self.diag_start = tf.constant(np.zeros((input_shape[-1], 1)),
+                                         dtype=self.dtype,
+                                         name='diag_start')
             
 
         # bias
@@ -172,3 +187,20 @@ class Spectral(Layer):
             'bias_constraint': self.bias_constraint,
         })
         return config
+    
+class CustomInitializer_diag_end(tf.keras.initializers.Initializer):
+    def __init__(self,trainable_diag_end=None):
+        self.trainable_diag_end = trainable_diag_end
+    def __call__(self, shape, dtype=None,**kwargs):
+        if isinstance(self.trainable_diag_end, np.ndarray):
+            if self.trainable_diag_end.shape[0] == shape[0] and self.trainable_diag_end.shape[1] == shape[1]:
+                return tf.cast(tf.convert_to_tensor(self.trainable_diag_end,dtype=dtype))
+            else:
+                raise ValueError("trainable_diag_end must have the same shape as the layer's output shape")
+        else:   
+            raise ValueError("trainable_diag_end must be a Tensor or None") 
+
+    def get_config(self):  # Pour la sérialisation
+        return {
+            'trainable_diag_end': self.trainable_diag_end   # Pour la sérialisation
+            }   

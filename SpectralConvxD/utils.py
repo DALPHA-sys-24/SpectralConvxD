@@ -77,7 +77,7 @@ def pars():
                                                 'padding': 1,
                                                 'trainable_phi':True,
                                                 'use_lambda_out':False,
-                                                'use_lambda_in' : True,
+                                                'use_lambda_in' : False,
                                                 'use_bias': True
                                               },
                      "spectral_cnn2d_config":{ 'kernel_size': 3,
@@ -246,7 +246,7 @@ def plot_results(df,x_min,x_max,y_min,y_max,alpha=0.1,lw=2,figsize=(9,5),dpi=250
 
     """
     # Color map for different models
-    COLORS=["k","r","b","c","y","g","m"]
+    COLORS=["g","r","b","c","y","k","m"]
     MARKER=['*','o','^','v']
     
     fig, ax = plt.subplots(num=1,figsize=figsize,dpi=dpi)

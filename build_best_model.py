@@ -1,14 +1,12 @@
 import tensorflow as tf
 from tensorflow import keras
 from keras_tuner import Hyperband
-from SpectralLayer import Spectral
 import SpectralConvxD as spc
 print("SpectralConvxD version :{}".format(spc.__version__))
 
 
 def build_best_model(hp):
     d=40
-    use_bias=True
     activation="relu"
     
     spectral_config = { 'is_base_trainable': True,
@@ -16,18 +14,27 @@ def build_best_model(hp):
                     'is_diag_end_trainable': True,
                     'use_bias': True
                     }
+    spectral_cnn1d_config={ 'kernel_size':3,
+                        'stride': 1,
+                        'padding': 0,
+                        'trainable_phi':True,
+                        'use_lambda_out':False,
+                        'use_lambda_in' : False,
+                        'use_bias': True,
+                        'activation':"relu"
+                     }
 
     model= tf.keras.Sequential()
     model.add(tf.keras.layers.Input(shape=(d,)))
-    model.add(spc.SpecCnn1D(filters=20,kernel_size=3,stride=1,padding=0,trainable_phi=True,use_lambda_out=False,use_lambda_in=True,activation=activation,use_bias=use_bias))
+    model.add(spc.SpecCnn1D(filters=20,**spectral_cnn1d_config))
     
     model.add(tf.keras.layers.MaxPooling1D(pool_size=hp.Choice('pool_size', values=[2,3,4,5]), strides=1, padding="valid"))
     
     model.add(tf.keras.layers.Flatten())
     
-    model.add(Spectral(units=hp.Int('units', min_value=1000, max_value=3000, step=500),**spectral_config, activation=activation))
+    model.add(spc.Spectral(units=hp.Int('units', min_value=1000, max_value=3000, step=500),**spectral_config, activation=activation))
     spectral_config['is_diag_end_trainable'] =False
-    model.add(Spectral(10, **spectral_config, activation='softmax'))
+    model.add(spc.Spectral(10, **spectral_config, activation='softmax'))
     model.compile(optimizer=keras.optimizers.Adam(hp.Choice('learning_rate', values=[0.001,0.003,0.005,0.01,0.02,0.025,0.03,0.05])),loss='sparse_categorical_crossentropy',metrics=['accuracy'])
 
     return model
