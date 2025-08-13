@@ -47,7 +47,7 @@ def pars():
                      "spectral_cnn1d_config":{ 'kernel_size': 3,
                                                 'stride': 1,
                                                 'padding': 0,
-                                                'trainable_phi':True,
+                                                'trainable_phi':False,
                                                 'use_lambda_out':False,
                                                 'use_lambda_in' : True,
                                                 'use_bias': True
@@ -74,7 +74,7 @@ def pars():
                                         },
                      "spectral_cnn1d_config":{ 'kernel_size': 3,
                                                 'stride': 1,
-                                                'padding': 1,
+                                                'padding': 0,
                                                 'trainable_phi':True,
                                                 'use_lambda_out':False,
                                                 'use_lambda_in' : False,

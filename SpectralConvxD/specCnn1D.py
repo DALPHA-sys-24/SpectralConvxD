@@ -83,18 +83,18 @@ class SpecCnn1D(Layer):
                 dtype=tf.float32,
                 trainable=self.trainable_phi)
         else:
-            self.kernel = tf.ones((self.filters,self.kernel_size),dtype=tf.float32)
+            self.kernel = tf.ones((self.filters,self.kernel_size),dtype=tf.float32, name='phi')
             
         # \lambda_in
         if self.use_lambda_in:
             self.lambda_in = self.add_weight(
                 name='lambda_in',
-                shape=(self.filters,self.input_shape),
+                shape=(self.filters,self.kernel_size),
                 initializer=self.lambda_in_initializer,
                 dtype=tf.float32,
                 trainable=self.use_lambda_in)
         else:
-            self.lambda_in = tf.ones((self.filters,self.input_shape),dtype=tf.float32)
+            self.lambda_in = tf.ones((self.filters,self.kernel_size),dtype=tf.float32, name='lambda_in')
 
 
         # \lambda_out
@@ -106,7 +106,7 @@ class SpecCnn1D(Layer):
                 dtype=tf.float32,
                 trainable=self.use_lambda_out)
         else:
-            self.lambda_out = tf.zeros((self.filters,self.output_shape),dtype=tf.float32)
+            self.lambda_out = tf.zeros((self.filters,self.output_shape),dtype=tf.float32,name='lambda_out')
         
 
         # \bias
@@ -132,7 +132,8 @@ class SpecCnn1D(Layer):
         phi = tf.sparse.to_dense(phi)
         
         # \encode
-        encode= tf.linalg.matmul(phi,tf.linalg.diag(self.lambda_in))
+        lambda_in=self.duplicate_to_size(self.lambda_in,inputs.shape[1])
+        encode= tf.linalg.matmul(phi,tf.linalg.diag(lambda_in))
         
         # \decode
         decode= tf.linalg.matmul( tf.linalg.diag(self.lambda_out),phi)
@@ -157,6 +158,13 @@ class SpecCnn1D(Layer):
             pass
 
         return outputs
+    
+    
+    def duplicate_to_size(self,trainable_weights, n):
+        l, k = tf.unstack(tf.shape(trainable_weights))
+        repeats = tf.cast(tf.math.ceil(n / k), tf.int32)
+        tiled = tf.tile(trainable_weights, [1, repeats])
+        return tiled[:, :n]
 
     def indices_phi(self,*args):
         self.indices: List[Tuple] = list()
