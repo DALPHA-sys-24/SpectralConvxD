@@ -58,7 +58,7 @@ if __name__ == "__main__":
                 models.train(x_train, y_train, x_test, y_test, name=models_name[inv],verbose=0)
                 print(f"Pre-training weights diag_end for {models_name[inv]} with p={p}")
 
-                pre_taining_weights=models.percentile_spectral_filter(trainable_weights=models.model.get_layer(name='spec1').variables,
+                pre_taining_weights,_=models.percentile_spectral_filter(trainable_weights=models.model.get_layer(name='spec1').variables,
                                                                     name=models_name[inv],
                                                                     p=p,
                                                                     layer_name='spec1')

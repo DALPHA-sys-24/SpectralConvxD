@@ -48,6 +48,7 @@ class SpectralCnn(object):
             self.model.add(tf.keras.layers.Flatten())
             
             if self.hyperparameters.get('full_training') and self.name=='specConvXd':
+                print("Full training:No pre training: Spectral compactness")
                 spectral_config['is_base_trainable']=True
                 self.model.add(Spectral(units, activation=self.hyperparameters.get('activation'),**spectral_config,name=self.layers_name[1]))
             else:
@@ -56,12 +57,11 @@ class SpectralCnn(object):
             if self.hyperparameters.get('pre_training') and self.name=='specConvXd':
                 print("Pre training: Spectral compactness")
                 spectral_config['is_base_trainable']=True
+                spectral_config['is_diag_end_trainable'] = False
                 self.model.add(Spectral(self.hyperparameters.get('labels'), **spectral_config, activation='softmax',name=self.layers_name[2]))
             else:
                 if self.hyperparameters.get('full_training') and self.name=='specConvXd':
-                    print("No pre training: Spectral compactness")
-                    spectral_config['is_diag_end_trainable']=True
-                    print(spectral_config['is_diag_end_trainable'])
+                    spectral_config['is_diag_end_trainable'] = False
                     self.model.add(Spectral(self.hyperparameters.get('labels'), **spectral_config, activation='softmax',name=self.layers_name[2]))
                 else:
                     self.model.add(Spectral(self.hyperparameters.get('labels'), **spectral_config, activation='softmax',name=self.layers_name[2]))
@@ -173,14 +173,14 @@ class SpectralCnn(object):
      
         if trainable_weights is None:
             if layer_name in self.layers_name:
-                # tw_copy= copy.deepcopy(self.trainable_weights[layer_name])
-                tw_copy = [tf.Variable(var.numpy().copy(),dtype=tf.float32,name=var.name,trainable=False) for var in self.trainable_weights[layer_name]]
+                tw_copy= copy.deepcopy(self.trainable_weights[layer_name])
+                # tw_copy = [tf.Variable(var.numpy().copy(),dtype=tf.float32,name=var.name,trainable=False) for var in self.trainable_weights[layer_name]]
 
             else:
                 raise ValueError("layer_name must be one of the layers in the model")
         else:
-            # tw_copy = copy.deepcopy(trainable_weights)
-            tw_copy = [tf.Variable(var.numpy().copy(),dtype=tf.float32,name=var.name,trainable=False) for var in trainable_weights]
+            tw_copy = copy.deepcopy(trainable_weights)
+            # tw_copy = [tf.Variable(var.numpy().copy(),dtype=tf.float32,name=var.name,trainable=False) for var in trainable_weights]
         
         if name not in ['reference', 'specConvXd', 'Dspec']:
             raise ValueError("model's name must be 'reference', 'specConvXd' or 'Dspec'")
