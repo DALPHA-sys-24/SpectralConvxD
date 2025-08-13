@@ -11,7 +11,7 @@ def build_best_model(hp):
     
     spectral_config = { 'is_base_trainable': True,
                     'is_diag_start_trainable': False,
-                    'is_diag_end_trainable': True,
+                    'is_diag_end_trainable': False,
                     'use_bias': True
                     }
     spectral_cnn1d_config={ 'kernel_size':3,

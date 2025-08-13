@@ -14,13 +14,13 @@ if __name__ == "__main__":
 
     hyperparameters = { 'filters' :20,
                     'input_shape' :(40,),
-                    'learning_rate' : 0.03,
+                    'learning_rate' : 0.01,
                     'epochs' : 20,
                     'batch_size' :100,
                     'activation': 'relu',
                     'labels' : 20,
                     'conxd':1,
-                    'pool_size':2,
+                    'pool_size':4,
                     'full_training':True,
                     'pre_training': True,
                     }

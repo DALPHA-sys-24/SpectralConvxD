@@ -24,7 +24,7 @@ class Spectral(Layer):
                  diag_end_initializer='optimized_uniform',
                  bias_initializer='zeros',
                  base_regularizer=None,
-                 diag_regularizer=l2(5E-2),
+                 diag_regularizer=l2(5E-3),
                  bias_regularizer=None,
                  activity_regularizer=None,
                  base_constraint=None,
@@ -58,7 +58,7 @@ class Spectral(Layer):
             self.diag_start_initializer = initializers.get(diag_start_initializer)
 
         if diag_end_initializer == 'optimized_uniform':
-            self.diag_end_initializer = initializers.RandomUniform(-0.1, 0.1)
+            self.diag_end_initializer = initializers.RandomUniform(-0.5, 0.5)
         # elif diag_end_initializer == 'custom':
         #     if self.trainable_weights_diag_end is not  None:
         #         self.diag_end_initializer = CustomInitializer_diag_end(self.trainable_weights_diag_end)

@@ -14,7 +14,7 @@ class SpectralCnn(object):
         self.hyperparameters=hyperparameters
         self.percentage_zeroed=[]
         self.cut_value=[]
-        self.trainable_weights={}
+
         
     def compile_models(self,units:int= 1000,spectral_config=None,spectral_cnn1d_config=None,spectral_cnn2d_config=None, name:str=None,layers_name=None,layer_cible=None):
         
@@ -29,8 +29,10 @@ class SpectralCnn(object):
         if not isinstance(units, int):
             raise ValueError("hyperparameters must be a dictionary")
 
+        # full_training and pre_training cannot be both True
         if self.hyperparameters.get('full_training') and self.hyperparameters.get('pre_training'):
-            raise ValueError("full_training and pre_training cannot be both True")      
+            raise ValueError("full_training and pre_training cannot be both True") 
+         
         if  self.name in  ['reference','Dspec','specConvXd']:
             self.model= tf.keras.Sequential()
             self.model.add(tf.keras.layers.Input(shape=self.hyperparameters.get('input_shape')))
@@ -58,7 +60,7 @@ class SpectralCnn(object):
             else:
                 if self.hyperparameters.get('full_training') and self.name=='specConvXd':
                     print("No pre training: Spectral compactness")
-                    spectral_config['is_diag_end_trainable']=False
+                    spectral_config['is_diag_end_trainable']=True
                     print(spectral_config['is_diag_end_trainable'])
                     self.model.add(Spectral(self.hyperparameters.get('labels'), **spectral_config, activation='softmax',name=self.layers_name[2]))
                 else:
@@ -97,9 +99,9 @@ class SpectralCnn(object):
                                      epochs=self.hyperparameters.get('epochs'), verbose=verbose,
                                      validation_data=(x_test, y_test))
         
-        temp={name:[var for var in self.model.get_layer(name=name).variables] for name in self.layers_name}
-        self.trainable_weights.update({name:[var for var in self.model.get_layer(name=name).variables] for name in self.layers_name})
-        self.history=history
+        
+        temp = {name: [copy.deepcopy(var) for var in self.model.get_layer(name=name).variables] for name in self.layers_name}
+        self.set_trainable_weigths(trainable_weights=temp)
         
     
     def evaluate(self,x_test, y_test, trainable_weights=None, path=None, name=None, order=0,layer_name=None,p=0,pre_pruning=False,save_accuracy=True):
@@ -135,34 +137,18 @@ class SpectralCnn(object):
         
         if 0 <= p and p <= 1 and 0<= order:
             if not pre_pruning:
-                weight_filter=self.percentile_spectral_filter(trainable_weights=trainable_weights, name=name, layer_name=layer_name,p=p)
+                weight_filter,_=self.percentile_spectral_filter(trainable_weights=trainable_weights, name=name, layer_name=layer_name,p=p)
                 self.model.get_layer(name=layer_name).set_weights(weight_filter)
             accuracy=self.model.evaluate(x_test, y_test, batch_size=self.hyperparameters.get('batch_size'), verbose="auto")[1]
             if save_accuracy and path is not None:
                 with open(f"{path}/{name}/accuracy{p}_{order}.txt", "a+") as f:
-                    f.write(str(accuracy))
+                    f.write(str(accuracy))  
                     f.write("\n")
-                
             self.model.get_layer(name=layer_name).set_weights(self.trainable_weights[layer_name])
             return accuracy
         else:
             raise NotImplemented("Fatal Error")
         
-    
-    def pre_training(self,trainable_weights=None,name=None,layer_name=None,p=0.0):
-        """
-        Pre-trains the model by applying a percentile spectral filter to the trainable weights.
-        
-        Args:
-            trainable_weights (list): List of trainable weights to filter.
-            name (str): Name of the model.
-            layer_name (str): Name of the layer for weight operations.
-            p (float): Percentile threshold for filtering (0.0-1.0).
-        
-        Returns:
-            list: Filtered trainable weights.
-        """
-        pass
         
     
     def percentile_spectral_filter(self, trainable_weights=None, name=None, layer_name=None,p=0.0):
@@ -187,33 +173,36 @@ class SpectralCnn(object):
      
         if trainable_weights is None:
             if layer_name in self.layers_name:
-                tw_copy= copy.deepcopy(self.trainable_weights[layer_name])
+                # tw_copy= copy.deepcopy(self.trainable_weights[layer_name])
+                tw_copy = [tf.Variable(var.numpy().copy(),dtype=tf.float32,name=var.name,trainable=False) for var in self.trainable_weights[layer_name]]
+
             else:
                 raise ValueError("layer_name must be one of the layers in the model")
         else:
-            tw_copy = copy.deepcopy(trainable_weights)
-            
+            # tw_copy = copy.deepcopy(trainable_weights)
+            tw_copy = [tf.Variable(var.numpy().copy(),dtype=tf.float32,name=var.name,trainable=False) for var in trainable_weights]
+        
         if name not in ['reference', 'specConvXd', 'Dspec']:
             raise ValueError("model's name must be 'reference', 'specConvXd' or 'Dspec'")
 
         if name =='specConvXd':
             for k,var in enumerate(tw_copy):
-                if var.name=='diag_end':
-                    cut_value=self.percentile_robust(var.numpy(),p)
-                    pruning_weights, percentage_zeroed = self.threshold_filter(cut_value, var.numpy())
+                if var.name=='diag_end:0' or var.name=='diag_end':
+                    cut_value=self.percentile_robust(var.numpy().copy(),p)
+                    pruning_weights, percentage_zeroed = self.threshold_filter(threshold=cut_value, vector=var.numpy().copy())
                     if np.allclose(var.numpy(),pruning_weights,atol=1e-16):
                         print("Done")
                     tw_copy[k].assign(pruning_weights)   
-            return tw_copy
+            return tw_copy,percentage_zeroed
         
         elif name=='reference':
             for k,var in enumerate(tw_copy):
-                if var.name=='base':
+                if var.name=='base'  or var.name=='base:0':
                     result, collapsed_indices, row_sums, threshold_value=self.absolute_value_of_the_incoming_connectivity_collapse(var.numpy(), p)
                     if np.allclose(var.numpy(),result,atol=1e-16):
                         print("Done")
                     tw_copy[k].assign(result)
-            return tw_copy
+            return tw_copy,threshold_value
 
         elif name=='Dspec':
             raise NotImplemented("Dspec model does not support percentile spectral filter")
@@ -221,36 +210,6 @@ class SpectralCnn(object):
             raise ValueError("model's name must be 'reference', 'specConvXd' or 'Dspec'")   
 
     
-    def p_robustness(self,layers: List= [3],p=0,name=None,w=None):
-        if name is None:
-            raise ValueError("model's name must be defined")
-        if name=='reference':
-            for k,layer in enumerate(layers):
-                if w is None:
-                    weigths=copy.deepcopy(self.weigths[k])
-                else:
-                    weigths=w
-                # units=weigths[0].shape[1]
-                result, collapsed_indices, row_sums, threshold_value=self.absolute_value_of_the_incoming_connectivity_collapse(weigths[0], p)
-                assert result.shape==weigths[0].shape
-                weigths[0]=result
-                # indices=random.sample(range(units),int(units*p))
-                # weigths[0][:,indices]=self.mask_by_quantile(weigths[0][:,indices],1)
-                self.model.layers[layer].set_weights(weigths)
-        else: 
-            for k,layer in enumerate(layers):
-                if w is None:
-                    weigths=copy.deepcopy(self.weigths[k])
-                else:
-                    weigths=w
-                # weigths[1]=self.mask_by_quantile(weigths[1], p)
-                cut_value = self.percentile_robust(weigths[1][0,:], p)
-                self.cut_value.append(cut_value)
-                pruning_weights, percentage_zeroed = self.threshold_filter(cut_value, weigths[1][0,:])
-                self.percentage_zeroed.append(percentage_zeroed)
-                assert pruning_weights.shape==weigths[1][0,:].shape
-                weigths[1][0,:] = pruning_weights
-                self.model.layers[layer].set_weights(weigths)
     
     def absolute_value_of_the_incoming_connectivity_collapse(self,matrix, p_percent):
         """
@@ -311,82 +270,106 @@ class SpectralCnn(object):
         return result, collapsed_indices, row_sums, threshold_value
 
     
-    
-    
     def percentile_robust(self, array, p) -> float:
         """
-        Calculate the percentile of an array, ignoring NaN values.
-        If the input is empty or contains only NaN values, raise a ValueError.
+        Calculate the percentile of the absolute values of a sequence 
+        (list, numpy array, or tensor), ignoring NaN and infinite values.
 
         Parameters:
-        - array: numpy array or list containing the data.   
-        - p: float, the percentile to compute (between 0 and 1).
+        - array: list, tuple, numpy array, or tf.Tensor containing the data.
+        - p: float, percentile to compute (between 0 and 1).
 
-        Returns:      
-        - The percentile value.
-
-        Raises:
-        - ValueError: if p is not between 0 and 1, or if the array is empty or contains only NaN values.
+        Returns:
+        - float: percentile value based on absolute values.
         """
+
+        # Vérif p
         if not isinstance(p, (int, float)):
-            raise ValueError("p must be a number")
-        if isinstance(array, list):
-            array = np.array(array)
+            raise ValueError("p must be a number between 0 and 1")
         if not 0 <= p <= 1:
             raise ValueError("p must be between 0 and 1")
-        if not isinstance(array, np.ndarray):
-            raise ValueError("Input must be a numpy array")
+
+        # Conversion en np.ndarray
+        if isinstance(array, tf.Tensor):
+            array = array.numpy()
+        elif isinstance(array, (list, tuple)):
+            array = np.array(array)
+        elif not isinstance(array, np.ndarray):
+            raise ValueError("Input must be list, tuple, numpy array, or tf.Tensor")
+
+        # Vérif taille
         if array.size == 0:
             raise ValueError("Input array is empty")
 
-        # Remove NaN values
+        # Nettoyage : supprime NaN et inf
         array_clean = array[~np.isnan(array)]
-        if array_clean.size == 0:
-            raise ValueError("Input array contains only NaN values")
+        array_clean = array_clean[np.isfinite(array_clean)]
 
-        return np.quantile(array_clean, p)
+        if array_clean.size == 0:
+            raise ValueError("Input array contains only NaN or infinite values")
+
+        # Calcul du percentile sur les valeurs absolues
+        abs_array = np.abs(array_clean)
+        return np.percentile(abs_array, p * 100)
+
+
 
 
     def threshold_filter(self, threshold, vector):
         """
-        Sets to zero the values in the vector that are smaller than the threshold.
+        Sets to zero the values whose absolute value is smaller than or equal to the threshold.
         
         Args:
             threshold (float): Threshold value
-            vector (list or np.array): Input vector
+            vector (list, tuple, np.ndarray, or tf.Tensor): Input vector or matrix
         
         Returns:
             tuple: (filtered_vector, percentage_zeroed)
-                - filtered_vector (np.array): Vector with values < threshold set to zero
-                - percentage_zeroed (float): Percentage of values that were set to zero
+                - filtered_vector (np.ndarray): Vector/matrix with abs(values) <= threshold set to zero
+                - percentage_zeroed (float): Percentage of values set to zero
         """
-        
-        if not isinstance(vector, (list, np.ndarray)):
-            raise ValueError("Vector must be a list or a numpy array")
-        if isinstance(vector, list):
+        # --- Validation du seuil ---
+        if not isinstance(threshold, (int, float, np.float32)):
+            raise ValueError("Threshold must be a number")
+        if np.isnan(threshold) or np.isinf(threshold):
+            raise ValueError("Threshold cannot be NaN or infinite")
+
+        # --- Conversion en np.ndarray ---
+        if isinstance(vector, tf.Tensor):
+            vector = vector.numpy()
+        elif isinstance(vector, (list, tuple)):
             vector = np.array(vector)
+        elif not isinstance(vector, np.ndarray):
+            raise ValueError("Vector must be list, tuple, numpy array, or tf.Tensor")
+
+        # --- Vérifications ---
         if vector.size == 0:
             raise ValueError("Input vector is empty")
-        if np.isnan(threshold):
-            raise ValueError("Threshold cannot be NaN")
-        if np.isnan(vector).all():
-            raise ValueError("Input vector contains only NaN values")
 
-        
-        # Create a copy to avoid modifying the original
+        # Suppression NaN / Inf
+        mask_valid = np.isfinite(vector)
+        if not mask_valid.any():
+            raise ValueError("Input vector contains only NaN or infinite values")
+
+        # --- Copie pour ne pas modifier l'original ---
         result = vector.copy()
-        
-        # Count values below threshold
-        values_below_threshold = np.sum(vector < threshold)
-        total_values = len(vector)
-        
-        # Calculate percentage
+
+        # Comptage des valeurs avec abs() <= seuil
+        values_below_threshold = np.sum((np.abs(result) <= threshold) & mask_valid)
+        total_values = np.sum(mask_valid)
+
+        # --- Mise à zéro ---
+        result[(np.abs(result) <= threshold) & mask_valid] = 0
+
+        # --- Pourcentage ---
         percentage_zeroed = (values_below_threshold / total_values) * 100 if total_values > 0 else 0
-        
-        # Set values below threshold to zero
-        result[result < threshold] = 0
+        print(
+            f"Total values:{total_values}, threshold: {threshold:.4f}, "
+            f"Values below|= threshold: {values_below_threshold}, Percentage zeroed: {percentage_zeroed:.2f}%"
+        )
         
         return result, percentage_zeroed
+
 
   
     def summary(self,name):
@@ -438,6 +421,7 @@ class SpectralCnn(object):
         return self.trainable_weights[layer_name]
 
     def set_trainable_weigths(self,trainable_weights=None):
+        self.trainable_weights={}
         if trainable_weights is None:
             raise ValueError("trainable_weights must be defined")
         if not isinstance(trainable_weights, dict):

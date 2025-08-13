@@ -42,7 +42,7 @@ if __name__ == "__main__":
                     for units in depth['N']:
                         print(f"units {units} :\n")
                         # compile, train and evaluate the model
-                        models.compile_models(units=2500,spectral_config=models_pars.get(name).get('spectral_config'),
+                        models.compile_models(units=units,spectral_config=models_pars.get(name).get('spectral_config'),
                                             spectral_cnn1d_config=models_pars.get(name).get('spectral_cnn1d_config'),
                                             spectral_cnn2d_config=models_pars.get(name).get('spectral_cnn2d_config'),
                                             name=name,
@@ -51,6 +51,6 @@ if __name__ == "__main__":
                         history=models.train(x_train, y_train, x_test, y_test, name=name,verbose=0)
                         for p in drop.get('p'):
                             models.evaluate(x_test, y_test, trainable_weights=None, path=path, name=name, order=order,layer_name='spec1',p=p,pre_pruning=False)
-                    break
+
     else :
         raise ValueError("No GPU available")
