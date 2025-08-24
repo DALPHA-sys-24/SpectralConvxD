@@ -101,12 +101,12 @@ class SpecCnn1D(Layer):
         if self.use_lambda_out:
             self.lambda_out = self.add_weight(
                 name='lambda_out',
-                shape=(self.filters,  self.output_shape),
+                shape=(self.filters,  self.kernel_size),
                 initializer=self.lambda_out_initializer,
                 dtype=tf.float32,
                 trainable=self.use_lambda_out)
         else:
-            self.lambda_out = tf.zeros((self.filters,self.output_shape),dtype=tf.float32,name='lambda_out')
+            self.lambda_out = tf.zeros((self.filters,self.kernel_size),dtype=tf.float32,name='lambda_out')
         
 
         # \bias
@@ -121,30 +121,10 @@ class SpecCnn1D(Layer):
             self.bias = None
 
     def call(self, inputs):
-        # \weights of  phi -> flatten
-        weights= tf.repeat(self.kernel, repeats=self.output_shape, axis=0, name=None)
-        weights = tf.reshape(weights, shape=(self.filters * self.output_shape * self.kernel_size,))
-        
-        # \phi
-        phi = tf.sparse.SparseTensor(
-        indices=self.indices, values=weights,
-        dense_shape=(self.filters,self.output_shape,self.input_shape))
-        phi = tf.sparse.to_dense(phi)
-        
-        # \encode
-        lambda_in=self.duplicate_to_size(self.lambda_in,inputs.shape[1])
-        encode= tf.linalg.matmul(phi,tf.linalg.diag(lambda_in))
-        
-        # \decode
-        decode= tf.linalg.matmul( tf.linalg.diag(self.lambda_out),phi)
-        
-        
-        # \kernel
-        kernel=encode-decode
-        
-
         # \output      
         outputs=tf.linalg.matmul(self.pad,inputs,transpose_b=True)
+        # \kernel  
+        kernel=self.convolution_op()
         outputs =tf.matmul(a=kernel, b=outputs)
         outputs=tf.transpose(outputs,perm=[2,1,0])
         
@@ -172,6 +152,30 @@ class SpecCnn1D(Layer):
             for i in range(self.output_shape):
                 for j in range(i*self.stride,i*self.stride+self.kernel_size):
                     self.indices.append((f,i,j))
+                    
+    @tf.function(jit_compile=True)
+    def convolution_op(self):
+        # \weights of  phi -> flatten
+        weights= tf.repeat(self.kernel, repeats=self.output_shape, axis=0, name=None)
+        weights = tf.reshape(weights, shape=(self.filters * self.output_shape * self.kernel_size,))
+        
+        # \phi
+        phi = tf.sparse.SparseTensor(
+        indices=self.indices, values=weights,
+        dense_shape=(self.filters,self.output_shape,self.input_shape))
+        phi = tf.sparse.to_dense(phi)
+        
+        # \encode
+        lambda_in=self.duplicate_to_size(self.lambda_in,self.input_shape)
+        encode= tf.linalg.matmul(phi,tf.linalg.diag(lambda_in))
+        
+        # \decode
+        lambda_out=self.duplicate_to_size(self.lambda_out,self.output_shape)
+        decode= tf.linalg.matmul( tf.linalg.diag(lambda_out),phi)
+        
+        # \kernel
+        kernel=encode-decode
+        return kernel
                     
 if __name__ == "__main__": 
     print("SpecCnn1D Layer is ready to use.")   

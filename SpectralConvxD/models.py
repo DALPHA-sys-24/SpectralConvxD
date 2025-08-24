@@ -132,18 +132,25 @@ class SpectralCnn(object):
         
         if not 0<= order:
             raise NotImplemented("Fatal error")
-        if not 0<= p <=1:
+        if not -1<= p <=1:
             raise NotImplemented("Fatal error")
         
-        if 0 <= p and p <= 1 and 0<= order:
+        if -1 <= p and p <= 1 and 0<= order:
             if not pre_pruning:
                 weight_filter,_=self.percentile_spectral_filter(trainable_weights=trainable_weights, name=name, layer_name=layer_name,p=p)
                 self.model.get_layer(name=layer_name).set_weights(weight_filter)
             accuracy=self.model.evaluate(x_test, y_test, batch_size=self.hyperparameters.get('batch_size'), verbose="auto")[1]
             if save_accuracy and path is not None:
-                with open(f"{path}/{name}/accuracy{p}_{order}.txt", "a+") as f:
-                    f.write(str(accuracy))  
-                    f.write("\n")
+                if 0<= p and p <= 1 and 0<= order:
+                    with open(f"{path}/{name}/accuracy{p}_{order}.txt", "a+") as f:
+                        f.write(str(accuracy))  
+                        f.write("\n")
+                elif p == -1 and 0 <= order:
+                    with open(f"{path}/{name}/accuracy{order}.txt", "a+") as f:
+                        f.write(str(accuracy))  
+                        f.write("\n")
+                else:
+                    raise ValueError("p must be between 0 and 1 or -1 for no pruning or ordrer must be >= 0")
             self.model.get_layer(name=layer_name).set_weights(self.trainable_weights[layer_name])
             return accuracy
         else:

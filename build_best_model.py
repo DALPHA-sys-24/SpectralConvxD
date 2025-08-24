@@ -15,18 +15,17 @@ def build_best_model(hp):
                     'use_bias': True
                     }
     spectral_cnn1d_config={ 'kernel_size':3,
-                        'stride': 1,
                         'padding': 0,
-                        'trainable_phi':True,
+                        'trainable_phi':False,
                         'use_lambda_out':False,
-                        'use_lambda_in' : False,
+                        'use_lambda_in' : True,
                         'use_bias': True,
                         'activation':"relu"
                      }
 
     model= tf.keras.Sequential()
     model.add(tf.keras.layers.Input(shape=(d,)))
-    model.add(spc.SpecCnn1D(filters=20,**spectral_cnn1d_config))
+    model.add(spc.SpecCnn1D(filters=20, stride=1,**spectral_cnn1d_config))
     
     model.add(tf.keras.layers.MaxPooling1D(pool_size=hp.Choice('pool_size', values=[2,3,4,5]), strides=1, padding="valid"))
     

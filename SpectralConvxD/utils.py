@@ -17,7 +17,7 @@ def pars():
                                         'use_bias': True
                                         },
                      "spectral_cnn1d_config":{ 'kernel_size': 3,
-                                                'stride': 1,
+                                                'stride': 3,
                                                 'padding': 0,
                                                 'trainable_phi':True,
                                                 'use_lambda_out':False,
@@ -45,7 +45,7 @@ def pars():
                                         'use_bias': True
                                         },
                      "spectral_cnn1d_config":{ 'kernel_size': 3,
-                                                'stride': 1,
+                                                'stride': 3,
                                                 'padding': 0,
                                                 'trainable_phi':False,
                                                 'use_lambda_out':False,
@@ -73,11 +73,11 @@ def pars():
                                         'use_bias': True
                                         },
                      "spectral_cnn1d_config":{ 'kernel_size': 3,
-                                                'stride': 1,
+                                                'stride': 3,
                                                 'padding': 0,
-                                                'trainable_phi':True,
+                                                'trainable_phi':False,
                                                 'use_lambda_out':False,
-                                                'use_lambda_in' : False,
+                                                'use_lambda_in' : True,
                                                 'use_bias': True
                                               },
                      "spectral_cnn2d_config":{ 'kernel_size': 3,
@@ -246,7 +246,7 @@ def plot_results(df,x_min,x_max,y_min,y_max,alpha=0.1,lw=2,figsize=(9,5),dpi=250
 
     """
     # Color map for different models
-    COLORS=["g","r","b","c","y","k","m"]
+    COLORS=["k","b","r","c","y","b","m"]
     MARKER=['*','o','^','v']
     
     fig, ax = plt.subplots(num=1,figsize=figsize,dpi=dpi)
@@ -263,12 +263,12 @@ def plot_results(df,x_min,x_max,y_min,y_max,alpha=0.1,lw=2,figsize=(9,5),dpi=250
         for i, name in enumerate(df.keys()):
             ax.plot(df[name].index, df[name].med, lw=lw, label=name, color=COLORS[i])
             ax.fill_between(df[name].index, df[name].q1, df[name].q2, color=COLORS[i], alpha=alpha)
-
-    ax.legend(loc=loc)
-    ax.set_xlabel(xlabel,fontsize=fontsize)
-    ax.set_ylabel(ylabel,fontsize=fontsize)
-    plt.xticks(fontsize=fontsize)
-    plt.yticks(fontsize=fontsize)
+    if loc is not None:
+        ax.legend(loc=loc)
+        ax.set_xlabel(xlabel,fontsize=fontsize)
+        ax.set_ylabel(ylabel,fontsize=fontsize)
+        plt.xticks(fontsize=fontsize)
+        plt.yticks(fontsize=fontsize)
     plt.grid(use_grid)
     
     if save_fig:
