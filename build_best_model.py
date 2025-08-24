@@ -15,7 +15,7 @@ def build_best_model(hp):
                     'use_bias': True
                     }
     spectral_cnn1d_config={ 'kernel_size':3,
-                        'padding': 0,
+                        'padding': 1,
                         'trainable_phi':False,
                         'use_lambda_out':False,
                         'use_lambda_in' : True,

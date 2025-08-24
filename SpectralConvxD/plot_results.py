@@ -50,7 +50,7 @@ except:
     print("Error loading results:")
 
 # Percentage of the budget to use for each depth
-if drop is None 
+if drop is None :
     for name in models_name:
         percentile =[models.number_of_parameters(name=name,units=value,pruning=0.7)/models.number_of_parameters(name='reference',units=BUDGET,pruning=0.7) for value in depth['N']]
         df[name]['p'] = percentile

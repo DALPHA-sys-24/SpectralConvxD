@@ -37,7 +37,21 @@ class SpectralCnn(object):
             self.model= tf.keras.Sequential()
             self.model.add(tf.keras.layers.Input(shape=self.hyperparameters.get('input_shape')))
             if self.hyperparameters.get('conxd')==1: 
-                self.model.add(SpecCnn1D(filters=self.hyperparameters.get('filters'),activation=self.hyperparameters.get('activation'),name=self.layers_name[0],**spectral_cnn1d_config))
+                if self.hyperparameters.get('feature_select') and self.name=='Dspec':
+                    spectral_cnn1d_config['use_lambda_in']=True
+                    spectral_cnn1d_config['trainable_phi']=False
+                    self.model.add(SpecCnn1D(filters=self.hyperparameters.get('filters'),
+                                             spectral_kernel_size=self.hyperparameters.get('input_shape')[0],
+                                             activation=self.hyperparameters.get('activation'),
+                                             name=self.layers_name[0],**spectral_cnn1d_config))
+                else:
+                    spectral_cnn1d_config['use_lambda_in']=False
+                    spectral_cnn1d_config['trainable_phi']=True
+                    self.model.add(SpecCnn1D(filters=self.hyperparameters.get('filters'),
+                                             spectral_kernel_size=self.hyperparameters.get('input_shape')[0],
+                                             activation=self.hyperparameters.get('activation'),
+                                             name=self.layers_name[0],**spectral_cnn1d_config))
+                    
                 self.model.add(tf.keras.layers.MaxPooling1D(pool_size=self.hyperparameters.get('pool_size'),**self.maxpooling_config))
             elif self.hyperparameters.get('conxd')==2:
                 self.model.add(SpecCnn2D(filters=self.hyperparameters.get('filters'),activation=self.hyperparameters.get('activation'),name=self.layers_name[0],**spectral_cnn2d_config))
@@ -212,7 +226,14 @@ class SpectralCnn(object):
             return tw_copy,threshold_value
 
         elif name=='Dspec':
-            raise NotImplemented("Dspec model does not support percentile spectral filter")
+            for k,var in enumerate(tw_copy):
+                if var.name=='lambda_in' or var.name=='lambda_in:0':
+                    cut_value=self.percentile_robust(var.numpy().copy(),p)
+                    pruning_weights, percentage_zeroed = self.threshold_filter(threshold=cut_value, vector=var.numpy().copy())
+                    if np.allclose(var.numpy(),pruning_weights,atol=1e-16):
+                        print("Done")
+                    tw_copy[k].assign(pruning_weights)   
+            return tw_copy,percentage_zeroed
         else:
             raise ValueError("model's name must be 'reference', 'specConvXd' or 'Dspec'")   
 

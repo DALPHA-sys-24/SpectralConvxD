@@ -1,6 +1,8 @@
 
 from tensorflow.keras.layers import Layer
-from tensorflow.keras import activations, initializers
+from tensorflow.keras import activations, initializers,regularizers
+
+from tensorflow.keras.regularizers import l2
 
 from .utils import *
 
@@ -8,6 +10,7 @@ from .utils import *
 class SpecCnn1D(Layer):
     def __init__(self, filters,
                     kernel_size=3,
+                    spectral_kernel_size=5,
                     stride=1,
                     padding=0,
                     activation="relu",
@@ -18,6 +21,7 @@ class SpecCnn1D(Layer):
                     bias_initializer='zeros',
                     phi_initializer="glorot_uniform",
                     lambda_in_initializer="glorot_uniform",
+                    lambda_in_regularizer=l2(2E-5),
                     lambda_out_initializer="glorot_uniform",
                     **kwargs):
 
@@ -25,6 +29,7 @@ class SpecCnn1D(Layer):
 
         self.filters = filters
         self.kernel_size = kernel_size
+        self.spectral_kernel_size=spectral_kernel_size
         self.stride = stride
         self.padding = padding
         self.use_bias = use_bias
@@ -37,6 +42,7 @@ class SpecCnn1D(Layer):
         self.phi_initializer = initializers.get(phi_initializer)
         self.lambda_in_initializer = initializers.get(lambda_in_initializer)
         self.lambda_out_initializer = initializers.get(lambda_out_initializer)
+        self.lambda_in_regularizer = regularizers.get(lambda_in_regularizer)
 
     def build(self, input_shape):
         
@@ -86,27 +92,24 @@ class SpecCnn1D(Layer):
             self.kernel = tf.ones((self.filters,self.kernel_size),dtype=tf.float32, name='phi')
             
         # \lambda_in
-        if self.use_lambda_in:
-            self.lambda_in = self.add_weight(
-                name='lambda_in',
-                shape=(self.filters,self.kernel_size),
-                initializer=self.lambda_in_initializer,
-                dtype=tf.float32,
-                trainable=self.use_lambda_in)
-        else:
-            self.lambda_in = tf.ones((self.filters,self.kernel_size),dtype=tf.float32, name='lambda_in')
-
+        self.lambda_in = self.add_weight(
+            name='lambda_in',
+            shape=(self.filters,self.spectral_kernel_size),
+            initializer=self.lambda_in_initializer,
+            regularizer=self.lambda_in_regularizer,
+            dtype=tf.float32,
+            trainable=self.use_lambda_in)
 
         # \lambda_out
         if self.use_lambda_out:
             self.lambda_out = self.add_weight(
                 name='lambda_out',
-                shape=(self.filters,  self.kernel_size),
+                shape=(self.filters,  self.spectral_kernel_size),
                 initializer=self.lambda_out_initializer,
                 dtype=tf.float32,
                 trainable=self.use_lambda_out)
         else:
-            self.lambda_out = tf.zeros((self.filters,self.kernel_size),dtype=tf.float32,name='lambda_out')
+            self.lambda_out = tf.zeros((self.filters,self.spectral_kernel_size),dtype=tf.float32,name='lambda_out')
         
 
         # \bias
@@ -153,7 +156,7 @@ class SpecCnn1D(Layer):
                 for j in range(i*self.stride,i*self.stride+self.kernel_size):
                     self.indices.append((f,i,j))
                     
-    @tf.function(jit_compile=True)
+    @tf.function
     def convolution_op(self):
         # \weights of  phi -> flatten
         weights= tf.repeat(self.kernel, repeats=self.output_shape, axis=0, name=None)
